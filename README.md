@@ -12,9 +12,9 @@ Usage
 -----
 To perform alignment of chromatograms written in files `file1.mzml`, `file2.mzml` run:
 ```
-python3 align.py file1.mzml file2.mzml ...
+python3 src/align.py file1.mzml file2.mzml ...
 ```
 More help under
 ```
-python3 align.py --help
+python3 src/align.py --help
 ```
