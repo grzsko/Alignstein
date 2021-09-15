@@ -1,3 +1,5 @@
+import numpy as np
+
 def id_scale(rts, *other):
     return rts
 
@@ -20,6 +22,7 @@ class Chromatogram:
         self.weight = weight
         self.mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
         self.hull = None
+        self.empty = len(self.rts) == 0
 
     def normalize(self, target_value = 1.0):
         """
