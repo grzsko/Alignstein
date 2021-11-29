@@ -1,28 +1,34 @@
 import numpy as np
 
+
+def custom_scale(rts, constant, other_constant=4):
+    return rts / float(constant) / other_constant
+
 def id_scale(rts, *other):
     return rts
 
 def constant_scale(rts, constant):
     return rts / float(constant)
 
-def custom_scale(rts, constants):
-    # TODO
-    pass
+# def custom_scale(rts, constants):
+#     # TODO
+#     pass
 
 def RT_scale(*args, **kwargs):
-    return constant_scale(*args, **kwargs)
+#     return constant_scale(*args, **kwargs)
+    return custom_scale(*args, **kwargs)
 
 class Chromatogram:
-    def __init__(self, rts, mzs, ints, weight=1):
+    # Assuming that MS1 and MS2 are centroided
+    def __init__(self, rts, mzs, ints, weight=1, extra_weight=1):
+        self.empty = len(rts) == 0
         self.rts = np.array(rts)
         self.mzs = np.array(mzs)
         self.ints = np.array(ints)
-        self.tic = np.sum(ints)
-        self.weight = weight
+#         self.tic = np.sum(ints)
+        self.weight = weight * extra_weight
         self.mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
         self.hull = None
-        self.empty = len(self.rts) == 0
 
     def normalize(self, target_value = 1.0):
         """
@@ -30,11 +36,11 @@ class Chromatogram:
         """
         if self.tic != target_value:
             self.ints = target_value / self.tic * self.ints
-            self.tic = np.sum(self.ints)
+#             self.tic = np.sum(self.ints)
 
     def scale_rt(self):
         self.rts = RT_scale(self.rts, self.weight)
-        self.mid[0] = self.mid[0] / self.weight
+        self.mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
         self.hull = None
 
     def plot(self, ax):
@@ -43,6 +49,14 @@ class Chromatogram:
     @property
     def confs(self):
         return list(zip(zip(self.rts, self.mzs), self.ints))
+
+#     @property
+#     def centroid(self):
+#         return (np.mean(self.rts), np.mean(self.mzs))
+    # TODO, remove it, there is a mid!
+    @property
+    def tic(self):
+        return np.sum(self.ints)
 
     def __len__(self):
         return len(self.rts)

@@ -10,10 +10,18 @@ Arguments:
 import xml.etree.ElementTree as ET
 import pyopenms
 import numpy as np
+from tqdm import tqdm
 from sklearn.cluster import MiniBatchKMeans
+import networkx as nx
 
-from chromatogram import Chromatogram
-from OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
+from scipy.spatial.distance import cdist
+from scipy.spatial import Delaunay
+from scipy.spatial import ConvexHull
+from scipy.sparse import csr_matrix
+from MassSinkhornmetry import distance_dense
+
+from Alignstein.chromatogram import Chromatogram
+from Alignstein.OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
 
 
 def parse_ms1_xml(filename):
@@ -146,24 +154,22 @@ def features_to_weight(features):
     return get_weight_from_widths_lengths(*gather_widths_lengths(features))
 
 
-def gather_ch_stats_over_exps(dirname):
-    fnames = []
-    means = []
-    variances = []
-    for i, filename in enumerate(os.listdir(dirname)):
-        if filename.endswith(".mzXML") and i % 5 == 0:
-            print("Now working on:", filename)
-            input_map = parse_ms1_xml(os.path.join(dirname, filename))
-            gc.collect()
-            features = find_features(input_map)
-            lengths, widths = gather_widths_lengths(features)
-            means.append((np.mean(widths), np.mean(lengths),
-                         np.mean(lengths) / np.mean(widths)))
-            variances.append((np.std(widths), np.std(lengths),
-                             np.std(lengths) / np.std(widths)))
-    return means, variances
-
-
+# def gather_ch_stats_over_exps(dirname):
+#     fnames = []
+#     means = []
+#     variances = []
+#     for i, filename in enumerate(os.listdir(dirname)):
+#         if filename.endswith(".mzXML") and i % 5 == 0:
+#             print("Now working on:", filename)
+#             input_map = parse_ms1_xml(os.path.join(dirname, filename))
+#             gc.collect()
+#             features = find_features(input_map)
+#             lengths, widths = gather_widths_lengths(features)
+#             means.append((np.mean(widths), np.mean(lengths),
+#                          np.mean(lengths) / np.mean(widths)))
+#             variances.append((np.std(widths), np.std(lengths),
+#                              np.std(lengths) / np.std(widths)))
+#     return means, variances
 def feature_to_chromatogram(feature, input_map, w):
     # TODO very inefficient way to do it, correct it
     # TODO it may not work properly (takes too many peaks), but still, everything here is not properly definied
@@ -184,15 +190,12 @@ def feature_to_chromatogram(feature, input_map, w):
                     mzs.append(mz)
                     rts.append(rt)
                     ints.append(i)
-
+    if len(rts) == 0:
+        print("zero length", w)
     ch = Chromatogram(rts, mzs, ints, w)
     ch.scale_rt()
     ch.normalize()
-
-    ch.feature_id = [feature.getIntensity(), feature.getRT(), feature.getMZ()]
-
     return ch
-
 
 def features_to_chromatograms(input_map, features, w):
     chromatograms = []
@@ -204,12 +207,15 @@ def features_to_chromatograms(input_map, features, w):
 def chromatogram_dist(ch1, ch2, penalty=40):
     dists = cdist(np.column_stack((ch1.rts, ch1.mzs)),
                   np.column_stack((ch2.rts, ch2.mzs)), 'cityblock')
-    return spectral_distance_dense(ch1.ints, ch2.ints, dists, eps=1, lam=penalty, method="TV")
+    return distance_dense(ch1.ints, ch2.ints, dists=dists, eps=1, lam=penalty, method="TV")
 
 
 def mid_dist(ch1, ch2):
     return np.sum(np.abs(ch1.mid - ch2.mid))
 
+
+def mid_mz_dist(ch1, ch2):
+    return abs(ch1.mid[1] - ch2.mid[1])
 
 def calc_two_ch_sets_dists(chromatograms1, chromatograms2,
                            sinkhorn_upper_bound=40):
@@ -222,20 +228,19 @@ def calc_two_ch_sets_dists(chromatograms1, chromatograms2,
     print("Calculating distances")
     for i, chi in enumerate(chromatograms1):
         for j, chj in enumerate(chromatograms2):
-            if mid_dist(chi, chj) <= sinkhorn_upper_bound:
-                #                 print(i,j, len(chi), len(chj))
-                ch_dists[i, j] = chromatogram_dist(
-                    chi, chj, sinkhorn_upper_bound)
+            # TODO maybe remove mid MZ heuristic
+            if mid_dist(chi, chj) <= sinkhorn_upper_bound and mid_mz_dist(chi, chj) < 2:
+#                 print(i,j, len(chi), len(chj))
+                ch_dists[i,j] = chromatogram_dist(chi, chj, sinkhorn_upper_bound)
             tick += 1
             if tick % 300 == 0:
                 pbar.update(300)
     pbar.close()
     print("Calculated dists, number of nans:", np.sum(np.isnan(ch_dists)))
-    print("All columns have any row non zero:",
-          np.all(np.any(ch_dists < np.inf, axis=0)))
-    print("All rows have any column non zero:",
-          np.all(np.any(ch_dists < np.inf, axis=1)))
+    print("All columns have any row non zero:", np.all(np.any(ch_dists < np.inf, axis=0)))
+    print("All rows have any column non zero:", np.all(np.any(ch_dists < np.inf, axis=1)))
     return ch_dists
+
 
 
 def match_chromatograms(ch_dists, penalty=40):
@@ -300,8 +305,6 @@ def extract_matching_from_flow(min_cost_flow):
 def chromatogram_sets_from_mzxml(filename):
     input_map = parse_ms1_xml(filename)
     features = find_features(input_map)
-    fh = pyopenms.FeatureXMLFile()
-    fh.store(filename + ".featureXML", features)
     weight = features_to_weight(features)
     print("Parsed file", filename, "\n", features.size(),
           "features found,\nAverage lenght to width:", weight)
@@ -391,3 +394,18 @@ def dump_consensus_features(consensus_features, filename,
                 row.extend(f_id)
             rows.append(" ".join(map(str, row)))
         outfile.write("\n".join(rows))
+
+def find_pairwise_consensus_features(chromatogram_set1, chromatogram_set2,
+                                     sinkhorn_upper_bound=40,
+                                     flow_trash_penalty=5):
+    consensus_features = []
+
+    c_dists = calc_two_ch_sets_dists(chromatogram_set1, chromatogram_set2,
+                                     sinkhorn_upper_bound=sinkhorn_upper_bound)
+    matchings, matched_left, matched_right = align_chromatogram_sets(
+        c_dists, flow_trash_penalty=flow_trash_penalty)
+
+    for left_f_ind, right_f_ind in matchings:
+        consensus_features.append([(0, left_f_ind), (1, right_f_ind)])
+
+    return consensus_features, [matched_left]
