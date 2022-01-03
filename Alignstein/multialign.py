@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 
-from align import calc_two_ch_sets_dists, align_chromatogram_sets
+from Alignstein.align import calc_two_ch_sets_dists, align_chromatogram_sets
 
 
 def gather_mids(chromatograms_sets_list):

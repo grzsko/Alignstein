@@ -4,19 +4,23 @@ import numpy as np
 def custom_scale(rts, constant, other_constant=4):
     return rts / float(constant) / other_constant
 
+
 def id_scale(rts, *other):
     return rts
 
+
 def constant_scale(rts, constant):
     return rts / float(constant)
+
 
 # def custom_scale(rts, constants):
 #     # TODO
 #     pass
 
 def RT_scale(*args, **kwargs):
-#     return constant_scale(*args, **kwargs)
+    #     return constant_scale(*args, **kwargs)
     return custom_scale(*args, **kwargs)
+
 
 class Chromatogram:
     # Assuming that MS1 and MS2 are centroided
@@ -25,18 +29,19 @@ class Chromatogram:
         self.rts = np.array(rts)
         self.mzs = np.array(mzs)
         self.ints = np.array(ints)
-#         self.tic = np.sum(ints)
+        #         self.tic = np.sum(ints)
         self.weight = weight * extra_weight
         self.mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
         self.hull = None
 
-    def normalize(self, target_value = 1.0):
+    def normalize(self, target_value=1.0):
         """
         Normalize the intensity values so that they sum up to the target value.
         """
         if self.tic != target_value:
             self.ints = target_value / self.tic * self.ints
-#             self.tic = np.sum(self.ints)
+
+    #             self.tic = np.sum(self.ints)
 
     def scale_rt(self):
         self.rts = RT_scale(self.rts, self.weight)
@@ -50,9 +55,9 @@ class Chromatogram:
     def confs(self):
         return list(zip(zip(self.rts, self.mzs), self.ints))
 
-#     @property
-#     def centroid(self):
-#         return (np.mean(self.rts), np.mean(self.mzs))
+    #     @property
+    #     def centroid(self):
+    #         return (np.mean(self.rts), np.mean(self.mzs))
     # TODO, remove it, there is a mid!
     @property
     def tic(self):
@@ -95,4 +100,4 @@ class Chromatogram:
         if self.hull is None:
             self.hull = Delaunay(np.c_[self.rts, self.mzs])
 
-        return np.any(self.hull.find_simplex(p)>=0)
+        return np.any(self.hull.find_simplex(p) >= 0)

@@ -1,5 +1,6 @@
 from scipy.spatial import ConvexHull
 
+
 class MyCollection(list):
     def size(self):
         return self.__len__()

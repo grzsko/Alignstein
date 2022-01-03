@@ -14,6 +14,7 @@ Options:
 """
 
 from docopt import docopt
+
 from align import *
 
 if __name__ == "__main__":
@@ -25,18 +26,19 @@ if __name__ == "__main__":
     else:
         chromatograms_sets_list = parse_feature_from_file_alignment_experiment_chromatogram_sets(
             arguments["MZML_FILE"], arguments["-f"])
-    #if len(chromatograms_sets_list) > 2:
+    # if len(chromatograms_sets_list) > 2:
     mids, ch_indices = gather_mids(chromatograms_sets_list)
 
     big_clusters = cluster_mids(mids, distance_threshold=20)
     clusters = big_clusters_to_clusters(mids, big_clusters,
                                         distance_threshold=30)
     clustered_chromatogram_set = create_chrom_sums(chromatograms_sets_list,
-                                                clusters, ch_indices)
+                                                   clusters, ch_indices)
     consensus_features, matched_all_sets = find_consensus_features(
-            clustered_chromatogram_set, chromatograms_sets_list,
-            sinkhorn_upper_bound=20, flow_trash_penalty=5
+        clustered_chromatogram_set, chromatograms_sets_list,
+        sinkhorn_upper_bound=20, flow_trash_penalty=5
     )
     # else:
     #     pass
-    dump_consensus_features(consensus_features, "align.out", chromatograms_sets_list)
+    dump_consensus_features(consensus_features, "align.out",
+                            chromatograms_sets_list)

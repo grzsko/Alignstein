@@ -43,6 +43,7 @@ def parse_ms1_mzdata(filename):
     input_map.updateRanges()
     return input_map
 
+
 def feature_from_file_features_to_chromatograms(input_map, features, w):
     chromatograms = []
     for f in features:
@@ -52,6 +53,7 @@ def feature_from_file_features_to_chromatograms(input_map, features, w):
             ch.cut_smallest_peaks(0.001)
             chromatograms.append(ch)
     return chromatograms
+
 
 def parse_feature_with_model_xml(filename):
     features = MyCollection()
@@ -81,7 +83,8 @@ def feature_from_file_experiment_chromatogram_set(filename, features_filename):
     weight = features_to_weight(features)
     print("Parsed file", filename, "\n", features.size(),
           "features found,\nAverage lenght to width:", weight)
-    return feature_from_file_features_to_chromatograms(input_map, features, weight)
+    return feature_from_file_features_to_chromatograms(input_map, features,
+                                                       weight)
 
 
 def parse_feature_from_file_alignment_experiment_chromatogram_sets(
@@ -193,6 +196,7 @@ def feature_to_chromatogram(feature, input_map, w):
     ch.normalize()
     return ch
 
+
 def features_to_chromatograms(input_map, features, w):
     chromatograms = []
     for f in features:
@@ -203,7 +207,8 @@ def features_to_chromatograms(input_map, features, w):
 def chromatogram_dist(ch1, ch2, penalty=40):
     dists = cdist(np.column_stack((ch1.rts, ch1.mzs)),
                   np.column_stack((ch2.rts, ch2.mzs)), 'cityblock')
-    return distance_dense(ch1.ints, ch2.ints, dists=dists, eps=1, lam=penalty, method="TV")
+    return distance_dense(ch1.ints, ch2.ints, dists=dists, eps=1, lam=penalty,
+                          method="TV")
 
 
 def mid_dist(ch1, ch2):
@@ -212,6 +217,7 @@ def mid_dist(ch1, ch2):
 
 def mid_mz_dist(ch1, ch2):
     return abs(ch1.mid[1] - ch2.mid[1])
+
 
 def calc_two_ch_sets_dists(chromatograms1, chromatograms2,
                            sinkhorn_upper_bound=40):
@@ -225,22 +231,24 @@ def calc_two_ch_sets_dists(chromatograms1, chromatograms2,
     for i, chi in enumerate(chromatograms1):
         for j, chj in enumerate(chromatograms2):
             # TODO maybe remove mid MZ heuristic
-            if mid_dist(chi, chj) <= sinkhorn_upper_bound and mid_mz_dist(chi, chj) < 2:
-#                 print(i,j, len(chi), len(chj))
-                ch_dists[i,j] = chromatogram_dist(chi, chj, sinkhorn_upper_bound)
+            if mid_dist(chi, chj) <= sinkhorn_upper_bound and mid_mz_dist(chi,
+                                                                          chj) < 2:
+                #                 print(i,j, len(chi), len(chj))
+                ch_dists[i, j] = chromatogram_dist(chi, chj,
+                                                   sinkhorn_upper_bound)
             tick += 1
             if tick % 300 == 0:
                 pbar.update(300)
     pbar.close()
     print("Calculated dists, number of nans:", np.sum(np.isnan(ch_dists)))
-    print("All columns have any row non zero:", np.all(np.any(ch_dists < np.inf, axis=0)))
-    print("All rows have any column non zero:", np.all(np.any(ch_dists < np.inf, axis=1)))
+    print("All columns have any row non zero:",
+          np.all(np.any(ch_dists < np.inf, axis=0)))
+    print("All rows have any column non zero:",
+          np.all(np.any(ch_dists < np.inf, axis=1)))
     return ch_dists
 
 
-
 def match_chromatograms(ch_dists, penalty=40):
-
     # 1 - from, 2 - to, 0 - s, t node, -1 is trash node
     G = nx.DiGraph()
     ROUNDING_COEF = 10
@@ -259,7 +267,8 @@ def match_chromatograms(ch_dists, penalty=40):
         G.add_edge((1, i), (-1, "trash"), capacity=1,
                    weight=penalty * ROUNDING_COEF)
 
-    if ch_dists.shape[0] > ch_dists.shape[1]:  # if equal, add no extra rubbish path
+    if ch_dists.shape[0] > ch_dists.shape[
+        1]:  # if equal, add no extra rubbish path
         G.add_edge((-1, "trash"), (0, "t"),
                    capacity=ch_dists.shape[0] - ch_dists.shape[1])
 
@@ -268,7 +277,8 @@ def match_chromatograms(ch_dists, penalty=40):
         G.add_edge((-1, "trash"), (2, i), capacity=1,
                    weight=penalty * ROUNDING_COEF)
 
-    if ch_dists.shape[1] > ch_dists.shape[0]:  # if equal, add no extra rubbish path
+    if ch_dists.shape[1] > ch_dists.shape[
+        0]:  # if equal, add no extra rubbish path
         G.add_edge((0, "s"), (-1, "trash"),
                    capacity=ch_dists.shape[1] - ch_dists.shape[0])
 
@@ -290,7 +300,8 @@ def extract_matching_from_flow(min_cost_flow):
     for from_type, from_id in min_cost_flow:
         if from_type == 1:
             for to_type, to_id in min_cost_flow[(from_type, from_id)]:
-                if to_type == 2 and min_cost_flow[(from_type, from_id)][(to_type, to_id)]:
+                if to_type == 2 and min_cost_flow[(from_type, from_id)][
+                    (to_type, to_id)]:
                     matchings.append((from_id, to_id))
                     matched_from.add(from_id)
                     matched_to.add(to_id)
@@ -308,24 +319,8 @@ def chromatogram_sets_from_mzxml(filename):
 
 
 def align_chromatogram_sets(ch_dists, flow_trash_penalty=40):
-    return extract_matching_from_flow(match_chromatograms(ch_dists, flow_trash_penalty))
-
-
-# def cluster_mids(mids, distance_threshold=20):
-# #     return DBSCAN(eps=2.5, min_samples=5, metric='l1', metric_params=None,
-# #              algorithm='auto', leaf_size=44, p=None, n_jobs=5).fit_predict(mids)
-#     return MiniBatchKMeans(n_clusters=16, init='k-means++', max_iter=100,
-#                            batch_size=100, verbose=0, compute_labels=True,
-#                            random_state=None, tol=0.0, max_no_improvement=10,
-#                            init_size=None, n_init=3, reassignment_ratio=0.01).fit_predict(mids)
-# #     return OPTICS(min_samples=5, max_eps=distance_threshold, eps=distance_threshold,
-# #                   cluster_method="dbscan", p=1).fit_predict(mids)
-#
-# def cluster_mids_subsets(mids, distance_threshold=20):
-#     return AgglomerativeClustering(n_clusters=None, affinity="l1",
-#                                    linkage='complete',
-#                                    distance_threshold=distance_threshold,
-#                                    ).fit_predict(mids)
+    return extract_matching_from_flow(
+        match_chromatograms(ch_dists, flow_trash_penalty))
 
 
 def create_chrom_sums(chromatograms_sets_list, clusters, chromatogram_indices):
@@ -377,6 +372,7 @@ def dump_consensus_features(consensus_features, filename,
                 row.extend(f_id)
             rows.append(" ".join(map(str, row)))
         outfile.write("\n".join(rows))
+
 
 def find_pairwise_consensus_features(chromatogram_set1, chromatogram_set2,
                                      sinkhorn_upper_bound=40,
