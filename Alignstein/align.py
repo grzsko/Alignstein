@@ -8,20 +8,16 @@ Arguments:
 
 """
 import xml.etree.ElementTree as ET
-import pyopenms
-import numpy as np
-from tqdm import tqdm
-from sklearn.cluster import MiniBatchKMeans
+
 import networkx as nx
-
-from scipy.spatial.distance import cdist
-from scipy.spatial import Delaunay
-from scipy.spatial import ConvexHull
-from scipy.sparse import csr_matrix
+import numpy as np
+import pyopenms
 from MassSinkhornmetry import distance_dense
+from scipy.spatial.distance import cdist
+from tqdm import tqdm
 
-from Alignstein.chromatogram import Chromatogram
 from Alignstein.OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
+from Alignstein.chromatogram import Chromatogram
 
 
 def parse_ms1_xml(filename):
@@ -315,34 +311,21 @@ def align_chromatogram_sets(ch_dists, flow_trash_penalty=40):
     return extract_matching_from_flow(match_chromatograms(ch_dists, flow_trash_penalty))
 
 
-def gather_mids(chromatograms_sets_list):
-    # it turns out that the best solution is to do it on python ordinary lists
-    mzs = []
-    rts = []
-    chromatogram_indices = []
-    for i, chromatogram_set in enumerate(chromatograms_sets_list):
-        for j, chromatogram in enumerate(chromatogram_set):
-            mzs.append(np.mean(chromatogram.mzs))
-            rts.append(np.mean(chromatogram.rts))
-            chromatogram_indices.append((i, j))
-    return (np.array(list(zip(rts, mzs))).reshape((-1, 2)),
-            np.array(chromatogram_indices))
-
-def cluster_mids(mids, distance_threshold=20):
-#     return DBSCAN(eps=2.5, min_samples=5, metric='l1', metric_params=None,
-#              algorithm='auto', leaf_size=44, p=None, n_jobs=5).fit_predict(mids)
-    return MiniBatchKMeans(n_clusters=16, init='k-means++', max_iter=100,
-                           batch_size=100, verbose=0, compute_labels=True,
-                           random_state=None, tol=0.0, max_no_improvement=10,
-                           init_size=None, n_init=3, reassignment_ratio=0.01).fit_predict(mids)
-#     return OPTICS(min_samples=5, max_eps=distance_threshold, eps=distance_threshold,
-#                   cluster_method="dbscan", p=1).fit_predict(mids)
-
-def cluster_mids_subsets(mids, distance_threshold=20):
-    return AgglomerativeClustering(n_clusters=None, affinity="l1",
-                                   linkage='complete',
-                                   distance_threshold=distance_threshold,
-                                   ).fit_predict(mids)
+# def cluster_mids(mids, distance_threshold=20):
+# #     return DBSCAN(eps=2.5, min_samples=5, metric='l1', metric_params=None,
+# #              algorithm='auto', leaf_size=44, p=None, n_jobs=5).fit_predict(mids)
+#     return MiniBatchKMeans(n_clusters=16, init='k-means++', max_iter=100,
+#                            batch_size=100, verbose=0, compute_labels=True,
+#                            random_state=None, tol=0.0, max_no_improvement=10,
+#                            init_size=None, n_init=3, reassignment_ratio=0.01).fit_predict(mids)
+# #     return OPTICS(min_samples=5, max_eps=distance_threshold, eps=distance_threshold,
+# #                   cluster_method="dbscan", p=1).fit_predict(mids)
+#
+# def cluster_mids_subsets(mids, distance_threshold=20):
+#     return AgglomerativeClustering(n_clusters=None, affinity="l1",
+#                                    linkage='complete',
+#                                    distance_threshold=distance_threshold,
+#                                    ).fit_predict(mids)
 
 
 def create_chrom_sums(chromatograms_sets_list, clusters, chromatogram_indices):
