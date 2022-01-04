@@ -4,6 +4,7 @@ from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 from Alignstein.align import calc_two_ch_sets_dists, align_chromatogram_sets
 from Alignstein.chromatogram import Chromatogram
 
+
 def gather_mids(chromatograms_sets_list):
     """
     Gather M/Zs and RTs from all chromatograms and chromatogram sets.
@@ -29,7 +30,8 @@ def cluster_mids_subsets(mids, distance_threshold=20):
                                    ).fit_predict(mids)
 
 
-def create_chrom_sums(chromatograms_sets_list, clusters, chromatogram_indices):
+def create_chrom_sums(chromatograms_sets_list, clusters, chromatogram_indices,
+                      exclude_indices=[]):
     idx_sort = np.argsort(clusters)
     vals, idx_start, count = np.unique(clusters[idx_sort],
                                        return_counts=True, return_index=True)
@@ -41,40 +43,47 @@ def create_chrom_sums(chromatograms_sets_list, clusters, chromatogram_indices):
     # think a while about it
     # exactly list of excluded indices is a list of excluded chromatogram sets
     for i, one_cluster_indices in enumerate(chromatogram_indices_by_clusters):
-        cluster_chroms = []
+        one_cluster_chromatograms = []
         for ch_set_id, ch_id in chromatogram_indices[one_cluster_indices]:
-            cluster_chroms.append(chromatograms_sets_list[ch_set_id][ch_id])
-        new_chromatogram = Chromatogram.sum_chromatograms(cluster_chroms)
-
-        new_chromatogram.cut_smallest_peaks(0.005)
+            if ch_set_id not in exclude_indices:
+                one_cluster_chromatograms.append(
+                    chromatograms_sets_list[ch_set_id][ch_id])
+        new_chromatogram = Chromatogram.sum_chromatograms(
+            one_cluster_chromatograms)
+        if not new_chromatogram.empty:
+            new_chromatogram.cut_smallest_peaks(0.005)
         result_ch_set.append(new_chromatogram)
     return result_ch_set
 
 
-def find_consensus_features(clustered_chromatogram_set, chromatograms_sets_list,
+def find_consensus_features(clusters, chromatogram_indices,
+                            chromatograms_sets_list,
                             sinkhorn_upper_bound=40, flow_trash_penalty=5,
                             turns=1):
     all_consensus_features = []
-    consensus_features = [[[] for _ in range(len(clustered_chromatogram_set))]
+    consensus_features = [[[] for _ in range(len(np.unique(clusters)))]
                           for _ in range(turns)]
-    # TODO clustered chromatogram set must recalculated in every loop iteration
-    # find_consensus features is called outside package,
-    # but creating clustered_chromatogram_set is done in create_chrom_sums
     for i, ch_set in enumerate(chromatograms_sets_list):
+        clustered_chromatogram_set = create_chrom_sums(
+            chromatograms_sets_list, clusters, chromatogram_indices,
+            exclude_indices=[i])
         c_dists = calc_two_ch_sets_dists(ch_set, clustered_chromatogram_set,
                                          sinkhorn_upper_bound=sinkhorn_upper_bound)
 
         for turn in range(turns):
             matchings, matched_left, matched_right = align_chromatogram_sets(
                 c_dists, flow_trash_penalty=flow_trash_penalty)
+            if len(matchings) == 0:
+                print("Breaking at turn ", turn)
+                break # there is no sense for more turns
             for chromatogram_j, feature_ind in matchings:
                 consensus_features[turn][feature_ind].append(
                     (i, chromatogram_j))
-            c_dists[list(
-                matched_left)] = np.inf  # simply stupid way to omit already used chromatograms
+            c_dists[list(matched_left)] = np.inf
+            # simply stupid way to omit already used chromatograms
 
-    for one_turn_cfeatures in consensus_features:
-        for c_feature in one_turn_cfeatures:
+    for one_turn_c_features in consensus_features:
+        for c_feature in one_turn_c_features:
             if len(c_feature) > 1:
                 all_consensus_features.append(c_feature)
     return all_consensus_features

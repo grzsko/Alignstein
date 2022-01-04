@@ -219,9 +219,11 @@ def mid_mz_dist(ch1, ch2):
     return abs(ch1.mid[1] - ch2.mid[1])
 
 
-def calc_two_ch_sets_dists(chromatograms1, chromatograms2,
+def calc_two_ch_sets_dists(chromatograms1: list[Chromatogram],
+                           chromatograms2: list[Chromatogram],
                            sinkhorn_upper_bound=40,
                            mz_mid_upper_bound=float("inf")):
+    # dist to empty chromatogram is inf
     total = len(chromatograms1) * len(chromatograms2)
 
     ch_dists = np.full((len(chromatograms1), len(chromatograms2)), np.inf)
@@ -231,14 +233,14 @@ def calc_two_ch_sets_dists(chromatograms1, chromatograms2,
     print("Calculating distances")
     for i, chi in enumerate(chromatograms1):
         for j, chj in enumerate(chromatograms2):
-            # TODO maybe remove mid MZ heuristic
-            if (mid_dist(chi, chj) <= sinkhorn_upper_bound and
-                    mid_mz_dist(chi, chj) < mz_mid_upper_bound):
-                ch_dists[i, j] = chromatogram_dist(chi, chj,
-                                                   sinkhorn_upper_bound)
-            tick += 1
-            if tick % 300 == 0:
-                pbar.update(300)
+            if not chi.empty and not chj.empty:
+                if (mid_dist(chi, chj) <= sinkhorn_upper_bound and
+                        mid_mz_dist(chi, chj) < mz_mid_upper_bound):
+                    ch_dists[i, j] = chromatogram_dist(
+                        chi, chj, sinkhorn_upper_bound)
+                tick += 1
+                if tick % 300 == 0:
+                    pbar.update(300)
     pbar.close()
     print("Calculated dists, number of nans:", np.sum(np.isnan(ch_dists)))
     print("All columns have any row non zero:",
@@ -321,6 +323,7 @@ def chromatogram_sets_from_mzxml(filename):
 def align_chromatogram_sets(ch_dists, flow_trash_penalty=40):
     return extract_matching_from_flow(
         match_chromatograms(ch_dists, flow_trash_penalty))
+
 
 def find_consensus_features(clustered_chromatogram_set, chromatograms_sets_list,
                             sinkhorn_upper_bound=40, flow_trash_penalty=5):

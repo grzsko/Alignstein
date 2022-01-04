@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.spatial import Delaunay
 
 
 def custom_scale(rts, constant, other_constant=4):
@@ -31,7 +32,8 @@ class Chromatogram:
         self.ints = np.array(ints)
         #         self.tic = np.sum(ints)
         self.weight = weight * extra_weight
-        self.mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
+        if not self.empty:
+            self.mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
         self.hull = None
 
     def normalize(self, target_value=1.0):
@@ -40,8 +42,6 @@ class Chromatogram:
         """
         if self.tic != target_value:
             self.ints = target_value / self.tic * self.ints
-
-    #             self.tic = np.sum(self.ints)
 
     def scale_rt(self):
         self.rts = RT_scale(self.rts, self.weight)
@@ -55,10 +55,6 @@ class Chromatogram:
     def confs(self):
         return list(zip(zip(self.rts, self.mzs), self.ints))
 
-    #     @property
-    #     def centroid(self):
-    #         return (np.mean(self.rts), np.mean(self.mzs))
-    # TODO, remove it, there is a mid!
     @property
     def tic(self):
         return np.sum(self.ints)
@@ -69,6 +65,8 @@ class Chromatogram:
     @staticmethod
     def sum_chromatograms(chromatograms_iterable):
         total_length = np.sum([len(ch) for ch in chromatograms_iterable])
+        if total_length == 0:
+            return Chromatogram([], [], []) # empty chromatogram
         rts = np.empty(total_length, dtype=np.float)
         mzs = np.empty(total_length, dtype=np.float)
         ints = np.empty(total_length, dtype=np.float)
@@ -92,9 +90,9 @@ class Chromatogram:
         self.rts = self.rts[where_to_cut]
         self.normalize()
 
-    def in_hull(self, p):
+    def any_in_hull(self, points):
         """
-        Test if points in `p` are in convex hull of chromatogram points
+        Test if points in `points` are in convex hull of chromatogram points.
         """
 
         if self.hull is None:
