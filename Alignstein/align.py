@@ -220,7 +220,8 @@ def mid_mz_dist(ch1, ch2):
 
 
 def calc_two_ch_sets_dists(chromatograms1, chromatograms2,
-                           sinkhorn_upper_bound=40):
+                           sinkhorn_upper_bound=40,
+                           mz_mid_upper_bound=float("inf")):
     total = len(chromatograms1) * len(chromatograms2)
 
     ch_dists = np.full((len(chromatograms1), len(chromatograms2)), np.inf)
@@ -231,9 +232,8 @@ def calc_two_ch_sets_dists(chromatograms1, chromatograms2,
     for i, chi in enumerate(chromatograms1):
         for j, chj in enumerate(chromatograms2):
             # TODO maybe remove mid MZ heuristic
-            if mid_dist(chi, chj) <= sinkhorn_upper_bound and mid_mz_dist(chi,
-                                                                          chj) < 2:
-                #                 print(i,j, len(chi), len(chj))
+            if (mid_dist(chi, chj) <= sinkhorn_upper_bound and
+                    mid_mz_dist(chi, chj) < mz_mid_upper_bound):
                 ch_dists[i, j] = chromatogram_dist(chi, chj,
                                                    sinkhorn_upper_bound)
             tick += 1
@@ -322,26 +322,6 @@ def align_chromatogram_sets(ch_dists, flow_trash_penalty=40):
     return extract_matching_from_flow(
         match_chromatograms(ch_dists, flow_trash_penalty))
 
-
-def create_chrom_sums(chromatograms_sets_list, clusters, chromatogram_indices):
-    idx_sort = np.argsort(clusters)
-    vals, idx_start, count = np.unique(clusters[idx_sort],
-                                       return_counts=True, return_index=True)
-    chromatogram_indices_by_clusters = np.split(idx_sort, idx_start[1:])
-    print("Average cluster size:", np.mean(
-        list(map(len, chromatogram_indices_by_clusters))))
-    result_ch_set = []
-    for i, one_cluster_indices in enumerate(chromatogram_indices_by_clusters):
-        cluster_chroms = []
-        for ch_set_id, ch_id in chromatogram_indices[one_cluster_indices]:
-            cluster_chroms.append(chromatograms_sets_list[ch_set_id][ch_id])
-        new_chromatogram = Chromatogram.sum_chromatograms(cluster_chroms)
-
-        new_chromatogram.cut_smallest_peaks(0.005)
-        result_ch_set.append(new_chromatogram)
-    return result_ch_set
-
-
 def find_consensus_features(clustered_chromatogram_set, chromatograms_sets_list,
                             sinkhorn_upper_bound=40, flow_trash_penalty=5):
     consensus_features = [[] for _ in range(len(clustered_chromatogram_set))]
@@ -380,7 +360,8 @@ def find_pairwise_consensus_features(chromatogram_set1, chromatogram_set2,
     consensus_features = []
 
     c_dists = calc_two_ch_sets_dists(chromatogram_set1, chromatogram_set2,
-                                     sinkhorn_upper_bound=sinkhorn_upper_bound)
+                                     sinkhorn_upper_bound=sinkhorn_upper_bound,
+                                     mz_mid_upper_bound=2)
     matchings, matched_left, matched_right = align_chromatogram_sets(
         c_dists, flow_trash_penalty=flow_trash_penalty)
 
