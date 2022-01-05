@@ -75,7 +75,7 @@ def find_consensus_features(clusters, chromatogram_indices,
                 c_dists, flow_trash_penalty=flow_trash_penalty)
             if len(matchings) == 0:
                 print("Breaking at turn ", turn)
-                break # there is no sense for more turns
+                break  # there is nothing more to be matched in next turns
             for chromatogram_j, feature_ind in matchings:
                 consensus_features[turn][feature_ind].append(
                     (i, chromatogram_j))
@@ -89,7 +89,7 @@ def find_consensus_features(clusters, chromatogram_indices,
     return all_consensus_features
 
 
-def cluster_mids(mids, distance_threshold=20):
+def precluster_mids(mids, distance_threshold=20):
     return MiniBatchKMeans(n_clusters=16, init='k-means++', max_iter=100,
                            batch_size=100, verbose=0, compute_labels=True,
                            random_state=None, tol=0.0, max_no_improvement=10,

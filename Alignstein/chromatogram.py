@@ -40,7 +40,7 @@ class Chromatogram:
         """
         Normalize the intensity values so that they sum up to the target value.
         """
-        if self.tic != target_value:
+        if not self.empty and self.tic != target_value:
             self.ints = target_value / self.tic * self.ints
 
     def scale_rt(self):
@@ -98,4 +98,4 @@ class Chromatogram:
         if self.hull is None:
             self.hull = Delaunay(np.c_[self.rts, self.mzs])
 
-        return np.any(self.hull.find_simplex(p) >= 0)
+        return np.any(self.hull.find_simplex(points) >= 0)
