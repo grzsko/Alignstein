@@ -9,15 +9,16 @@ Arguments:
 """
 import xml.etree.ElementTree as ET
 
-import networkx as nx
 import numpy as np
 import pyopenms
 from MassSinkhornmetry import distance_dense
 from scipy.spatial.distance import cdist
 from tqdm import tqdm
 
-from Alignstein.OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
-from Alignstein.chromatogram import Chromatogram
+from .OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
+from .chromatogram import Chromatogram
+from .mfmc import match_chromatograms
+# TODO read about better practices in importing
 
 
 def parse_ms1_xml(filename):
@@ -183,9 +184,9 @@ def feature_to_chromatogram(feature, input_map, w):
 
     for open_spectrum in input_map:
         rt = open_spectrum.getRT()
-        if min_rt <= rt and rt <= max_rt:
+        if min_rt <= rt <= max_rt:
             for mz, i in zip(*open_spectrum.get_peaks()):
-                if min_mz <= mz and mz <= max_mz:
+                if min_mz <= mz <= max_mz:
                     mzs.append(mz)
                     rts.append(rt)
                     ints.append(i)
@@ -250,67 +251,6 @@ def calc_two_ch_sets_dists(chromatograms1: list[Chromatogram],
     return ch_dists
 
 
-def match_chromatograms(ch_dists, penalty=40):
-    # 1 - from, 2 - to, 0 - s, t node, -1 is trash node
-    G = nx.DiGraph()
-    ROUNDING_COEF = 10
-
-    # WARNING! Both unmatched nodes pay for not pairing, contrary to pairing,
-    # where distance is paid once. So half of penalty should be interpreted as max
-    # distance for which it is acceptable to make a matching.
-
-    inds = np.nonzero(ch_dists < np.inf)
-    for i, j, dist in zip(*inds, ch_dists[inds]):
-        G.add_edge((1, i), (2, j), capacity=1,
-                   weight=int(round(dist * ROUNDING_COEF)))
-
-    for i in range(ch_dists.shape[0]):
-        G.add_edge((0, "s"), (1, i), capacity=1)
-        G.add_edge((1, i), (-1, "trash"), capacity=1,
-                   weight=penalty * ROUNDING_COEF)
-
-    if ch_dists.shape[0] > ch_dists.shape[
-        1]:  # if equal, add no extra rubbish path
-        G.add_edge((-1, "trash"), (0, "t"),
-                   capacity=ch_dists.shape[0] - ch_dists.shape[1])
-
-    for i in range(ch_dists.shape[1]):
-        G.add_edge((2, i), (0, "t"), capacity=1)
-        G.add_edge((-1, "trash"), (2, i), capacity=1,
-                   weight=penalty * ROUNDING_COEF)
-
-    if ch_dists.shape[1] > ch_dists.shape[
-        0]:  # if equal, add no extra rubbish path
-        G.add_edge((0, "s"), (-1, "trash"),
-                   capacity=ch_dists.shape[1] - ch_dists.shape[0])
-
-    min_cost_flow = nx.max_flow_min_cost(G, (0, "s"), (0, "t"))
-
-    return min_cost_flow
-
-
-def extract_matching_from_flow(min_cost_flow):
-    matchings = []
-    matched_from = set()
-    matched_to = set()
-    # unmatched_from = set()
-    # matched_to = set()
-
-    min_cost_flow.pop((0, "s"), None)
-    min_cost_flow.pop((0, "t"), None)
-
-    for from_type, from_id in min_cost_flow:
-        if from_type == 1:
-            for to_type, to_id in min_cost_flow[(from_type, from_id)]:
-                if to_type == 2 and min_cost_flow[(from_type, from_id)][
-                    (to_type, to_id)]:
-                    matchings.append((from_id, to_id))
-                    matched_from.add(from_id)
-                    matched_to.add(to_id)
-
-    return matchings, matched_from, matched_to  # , unmatched_from, unmatched_to
-
-
 def chromatogram_sets_from_mzxml(filename):
     input_map = parse_ms1_xml(filename)
     features = find_features(input_map)
@@ -320,28 +260,29 @@ def chromatogram_sets_from_mzxml(filename):
     return features_to_chromatograms(input_map, features, weight)
 
 
-def align_chromatogram_sets(ch_dists, flow_trash_penalty=40):
-    return extract_matching_from_flow(
-        match_chromatograms(ch_dists, flow_trash_penalty))
+# def align_chromatogram_sets(ch_dists, flow_trash_penalty=40):
+#     return match_chromatograms(ch_dists, flow_trash_penalty)
 
 
-def find_consensus_features(clustered_chromatogram_set, chromatograms_sets_list,
-                            sinkhorn_upper_bound=40, flow_trash_penalty=5):
-    consensus_features = [[] for _ in range(len(clustered_chromatogram_set))]
-    all_matched_left = []
-
-    for i, ch_set in enumerate(chromatograms_sets_list):
-        #         print(i)
-        c_dists = calc_two_ch_sets_dists(ch_set, clustered_chromatogram_set,
-                                         sinkhorn_upper_bound=sinkhorn_upper_bound)
-        matchings, matched_left, matched_right = align_chromatogram_sets(
-            c_dists, flow_trash_penalty=flow_trash_penalty)
-        for chromatogram_j, feature_ind in matchings:
-            consensus_features[feature_ind].append((i, chromatogram_j))
-
-        all_matched_left.append(matched_left)
-
-    return consensus_features, all_matched_left
+# def find_consensus_features(clustered_chromatogram_set, chromatograms_sets_list,
+#                             sinkhorn_upper_bound=40, flow_trash_penalty=5):
+#     consensus_features = [[] for _ in range(len(clustered_chromatogram_set))]
+#     all_matched_left = []
+#
+#     for chrom_set_i, chrom_set in enumerate(chromatograms_sets_list):
+#         #         print(i)
+#         chromatogram_dists = calc_two_ch_sets_dists(
+#             chrom_set, clustered_chromatogram_set,
+#             sinkhorn_upper_bound=sinkhorn_upper_bound)
+#         matchings, matched_left, matched_right = match_chromatograms(
+#             chromatogram_dists, flow_trash_penalty)
+#         for chromatogram_j, feature_ind in matchings:
+#             consensus_features[feature_ind].append(
+#                 (chrom_set_i, chromatogram_j))
+#
+#         all_matched_left.append(matched_left)
+#
+#     return consensus_features, all_matched_left
 
 
 def dump_consensus_features(consensus_features, filename,
@@ -365,7 +306,7 @@ def find_pairwise_consensus_features(chromatogram_set1, chromatogram_set2,
     c_dists = calc_two_ch_sets_dists(chromatogram_set1, chromatogram_set2,
                                      sinkhorn_upper_bound=sinkhorn_upper_bound,
                                      mz_mid_upper_bound=2)
-    matchings, matched_left, matched_right = align_chromatogram_sets(
+    matchings, matched_left, matched_right = match_chromatograms(
         c_dists, flow_trash_penalty=flow_trash_penalty)
 
     for left_f_ind, right_f_ind in matchings:

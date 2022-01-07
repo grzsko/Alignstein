@@ -1,8 +1,9 @@
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 
-from Alignstein.align import calc_two_ch_sets_dists, align_chromatogram_sets
-from Alignstein.chromatogram import Chromatogram
+from .mfmc import match_chromatograms
+from .align import calc_two_ch_sets_dists#, align_chromatogram_sets
+from .chromatogram import Chromatogram
 
 
 def gather_mids(chromatograms_sets_list):
@@ -63,6 +64,7 @@ def find_consensus_features(clusters, chromatogram_indices,
     all_consensus_features = []
     consensus_features = [[[] for _ in range(len(np.unique(clusters)))]
                           for _ in range(turns)]
+    # TODO think how to reformat this part
     for i, ch_set in enumerate(chromatograms_sets_list):
         clustered_chromatogram_set = create_chrom_sums(
             chromatograms_sets_list, clusters, chromatogram_indices,
@@ -71,8 +73,8 @@ def find_consensus_features(clusters, chromatogram_indices,
                                          sinkhorn_upper_bound=sinkhorn_upper_bound)
 
         for turn in range(turns):
-            matchings, matched_left, matched_right = align_chromatogram_sets(
-                c_dists, flow_trash_penalty=flow_trash_penalty)
+            matchings, matched_left, matched_right = match_chromatograms(
+                c_dists, flow_trash_penalty)
             if len(matchings) == 0:
                 print("Breaking at turn ", turn)
                 break  # there is nothing more to be matched in next turns
