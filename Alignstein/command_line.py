@@ -26,7 +26,7 @@ if __name__ == "__main__":
     else:
         chromatograms_sets_list = parse_feature_from_file_alignment_experiment_chromatogram_sets(
             arguments["MZML_FILE"], arguments["-f"])
-    # if len(chromatograms_sets_list) > 2:
+    # if len(features_per_samples) > 2:
     mids, ch_indices = gather_mids(chromatograms_sets_list)
 
     big_clusters = cluster_mids(mids, distance_threshold=20)

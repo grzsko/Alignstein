@@ -264,12 +264,12 @@ def chromatogram_sets_from_mzxml(filename):
 #     return match_chromatograms(ch_dists, flow_trash_penalty)
 
 
-# def find_consensus_features(clustered_chromatogram_set, chromatograms_sets_list,
+# def find_consensus_features(clustered_chromatogram_set, features_per_samples,
 #                             sinkhorn_upper_bound=40, flow_trash_penalty=5):
 #     consensus_features = [[] for _ in range(len(clustered_chromatogram_set))]
 #     all_matched_left = []
 #
-#     for chrom_set_i, chrom_set in enumerate(chromatograms_sets_list):
+#     for chrom_set_i, chrom_set in enumerate(features_per_samples):
 #         #         print(i)
 #         chromatogram_dists = calc_two_ch_sets_dists(
 #             chrom_set, clustered_chromatogram_set,
