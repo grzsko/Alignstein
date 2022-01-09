@@ -24,10 +24,14 @@ def gather_mids(chromatograms_sets_list):
 
 
 def cluster_mids_subsets(mids, distance_threshold=20):
+    mids_exp = np.copy(mids)
+    RT_COL = 0
+    mids_exp[:, RT_COL] = np.log(mids_exp[:, RT_COL])
     return AgglomerativeClustering(n_clusters=None, affinity="l1",
-                                   linkage='complete',
+                                   linkage='average',
+                                   # linkage='complete',
                                    distance_threshold=distance_threshold,
-                                   ).fit_predict(mids)
+                                   ).fit_predict(mids_exp)
 
 
 def flatten_chromatograms(chromatograms_sets_list, clusters,
