@@ -18,32 +18,9 @@ from tqdm import tqdm
 from .OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
 from .chromatogram import Chromatogram
 from .mfmc import match_chromatograms
+
+
 # TODO read about better practices in importing
-
-
-def parse_ms1_xml(filename):
-    options = pyopenms.PeakFileOptions()
-    options.setMSLevels([1])
-    fh = pyopenms.MzXMLFile()
-    fh.setOptions(options)
-
-    input_map = pyopenms.MSExperiment()
-    fh.load(filename, input_map)
-    input_map.updateRanges()
-    return input_map
-
-
-def parse_ms1_mzdata(filename):
-    options = pyopenms.PeakFileOptions()
-    options.setMSLevels([1])
-    fh = pyopenms.MzDataFile()
-    fh.setOptions(options)
-
-    input_map = pyopenms.MSExperiment()
-    fh.load(filename, input_map)
-    input_map.updateRanges()
-    return input_map
-
 
 def feature_from_file_features_to_chromatograms(input_map, features, w):
     chromatograms = []
@@ -61,7 +38,7 @@ def parse_feature_with_model_xml(filename):
     tree = ET.parse(filename)
     root = tree.getroot()
     feature_list = root.find("./featureList")
-    for i, feature in enumerate(feature_list.findall("./feature")):
+    for i, feature in enumerate(feature_list.findall("./openms_feature")):
         convex_hull = feature.find("./convexhull")
         points = []
         for hullpoint in convex_hull.findall("./hullpoint"):
@@ -73,7 +50,7 @@ def parse_feature_with_model_xml(filename):
             # mimicry_feature.caap_id = i
             features.append(mimicry_feature)
         else:
-            print("Skipping small feature, id:", feature.attrib["id"])
+            print("Skipping small openms_feature, id:", feature.attrib["id"])
             continue
     return features
 
@@ -83,7 +60,7 @@ def feature_from_file_experiment_chromatogram_set(filename, features_filename):
     features = parse_feature_with_model_xml(features_filename)
     weight = features_to_weight(features)
     print("Parsed file", filename, "\n", features.size(),
-          "features found,\nAverage lenght to width:", weight)
+          "openms_featues found,\nAverage lenght to width:", weight)
     return feature_from_file_features_to_chromatograms(input_map, features,
                                                        weight)
 
@@ -96,23 +73,6 @@ def parse_feature_from_file_alignment_experiment_chromatogram_sets(
             feature_from_file_experiment_chromatogram_set(ch_fname, f_fname))
 
     return ch_sets_list
-
-
-def find_features(input_map):
-    ff = pyopenms.FeatureFinder()
-    ff.setLogType(pyopenms.LogType.CMD)
-
-    # Run the feature finder
-    name = "centroided"
-    features = pyopenms.FeatureMap()
-    seeds = pyopenms.FeatureMap()
-    params = pyopenms.FeatureFinder().getParameters(name)
-
-    ff.run(name, input_map, features, params, seeds)
-
-    features.setUniqueIds()
-
-    return features
 
 
 def gather_ch_mzs_rts(features):
@@ -130,30 +90,6 @@ def gather_ch_mzs_rts(features):
     return rts, mzs, features_nb
 
 
-def gather_widths_lengths(features):
-    lengths_rt = []
-    widths_mz = []
-    for f in features:
-        ch = f.getConvexHull()
-        rt_max, mz_max = ch.getBoundingBox().maxPosition()
-        rt_min, mz_min = ch.getBoundingBox().minPosition()
-        lengths_rt.append(rt_max - rt_min)
-        widths_mz.append(mz_max - mz_min)
-
-    lengths_rt = np.array(lengths_rt)
-    widths_mz = np.array(widths_mz)
-
-    return lengths_rt, widths_mz
-
-
-def get_weight_from_widths_lengths(lengths_rt, widths_mz):
-    return np.mean(lengths_rt) / np.mean(widths_mz)
-
-
-def features_to_weight(features):
-    return get_weight_from_widths_lengths(*gather_widths_lengths(features))
-
-
 # def gather_ch_stats_over_exps(dirname):
 #     fnames = []
 #     means = []
@@ -163,46 +99,14 @@ def features_to_weight(features):
 #             print("Now working on:", filename)
 #             input_map = parse_ms1_xml(os.path.join(dirname, filename))
 #             gc.collect()
-#             features = find_features(input_map)
-#             lengths, widths = gather_widths_lengths(features)
+#             openms_featues = find_features(input_map)
+#             lengths, widths = gather_widths_lengths(openms_featues)
 #             means.append((np.mean(widths), np.mean(lengths),
 #                          np.mean(lengths) / np.mean(widths)))
 #             variances.append((np.std(widths), np.std(lengths),
 #                              np.std(lengths) / np.std(widths)))
 #     return means, variances
-def feature_to_chromatogram(feature, input_map, w):
-    # TODO very inefficient way to do it, correct it
-    # TODO it may not work properly (takes too many peaks), but still, everything here is not properly definied
-    # 1. choose spectra by RT
-    # 2. iterate over mz and check if is enclosed
-    max_rt, max_mz = feature.getConvexHull().getBoundingBox().maxPosition()
-    min_rt, min_mz = feature.getConvexHull().getBoundingBox().minPosition()
 
-    mzs = []
-    rts = []
-    ints = []
-
-    for open_spectrum in input_map:
-        rt = open_spectrum.getRT()
-        if min_rt <= rt <= max_rt:
-            for mz, i in zip(*open_spectrum.get_peaks()):
-                if min_mz <= mz <= max_mz:
-                    mzs.append(mz)
-                    rts.append(rt)
-                    ints.append(i)
-    if len(rts) == 0:
-        print("zero length", w)
-    ch = Chromatogram(rts, mzs, ints, w)
-    ch.scale_rt()
-    ch.normalize()
-    return ch
-
-
-def features_to_chromatograms(input_map, features, w):
-    chromatograms = []
-    for f in features:
-        chromatograms.append(feature_to_chromatogram(f, input_map, w))
-    return chromatograms
 
 
 def chromatogram_dist(ch1, ch2, penalty=40):
@@ -251,15 +155,6 @@ def calc_two_ch_sets_dists(chromatograms1: list[Chromatogram],
     return ch_dists
 
 
-def chromatogram_sets_from_mzxml(filename):
-    input_map = parse_ms1_xml(filename)
-    features = find_features(input_map)
-    weight = features_to_weight(features)
-    print("Parsed file", filename, "\n", features.size(),
-          "features found,\nAverage lenght to width:", weight)
-    return features_to_chromatograms(input_map, features, weight)
-
-
 # def align_chromatogram_sets(ch_dists, flow_trash_penalty=40):
 #     return match_chromatograms(ch_dists, flow_trash_penalty)
 
@@ -288,7 +183,7 @@ def chromatogram_sets_from_mzxml(filename):
 def dump_consensus_features(consensus_features, filename,
                             chromatograms_sets_list):
     rows = []
-    with open(filename, "w") as outfile:
+    with open(filename, "weight") as outfile:
         for consensus_feature in consensus_features:
             row = []
             for set_i, chromatogram_j in consensus_feature:
@@ -307,7 +202,7 @@ def find_pairwise_consensus_features(chromatogram_set1, chromatogram_set2,
                                      sinkhorn_upper_bound=sinkhorn_upper_bound,
                                      mz_mid_upper_bound=2)
     matchings, matched_left, matched_right = match_chromatograms(
-        c_dists, flow_trash_penalty=flow_trash_penalty)
+        c_dists, penalty=flow_trash_penalty)
 
     for left_f_ind, right_f_ind in matchings:
         consensus_features.append([(0, left_f_ind), (1, right_f_ind)])
