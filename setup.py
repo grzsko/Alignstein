@@ -7,4 +7,7 @@ setup(
     description='LC/GC-MS alignment algorithm based on Wasserstein distance',
     author='Grzegorz Skoraczynski',
     license='MIT',
+    python_requires=">=3.8",
+    install_requires=["tqdm", "pyopenms", "numpy", "scipy", "networkx",
+                      "scikit-learn"]
 )
