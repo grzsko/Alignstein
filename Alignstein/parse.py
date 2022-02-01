@@ -74,12 +74,15 @@ def parse_chromatogram_file(filename):
         Detected openms_featues
     """
     file_extension = os.path.splitext(filename)[-1].lower()
-    if file_extension == "mzml":
+    if file_extension == ".mzml":
         return parse_ms1_mzml(filename)
-    elif file_extension == "mzxml":
+    elif file_extension == ".mzxml":
         return parse_ms1_mzxml(filename)
-    else:
+    elif file_extension == ".mzxml":
         return parse_ms1_mzdata(filename)
+    else:
+        raise ValueError("Filetype {} not supported for file {}".format(
+            file_extension, filename))
     # TODO refactor to lesser code repetitions
 
 
