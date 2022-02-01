@@ -14,6 +14,7 @@ import pyopenms
 from MassSinkhornmetry import distance_dense
 from scipy.spatial.distance import cdist
 from tqdm import tqdm
+from typing import List
 
 from .OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
 from .chromatogram import Chromatogram
@@ -108,7 +109,6 @@ def gather_ch_mzs_rts(features):
 #     return means, variances
 
 
-
 def chromatogram_dist(ch1, ch2, penalty=40):
     dists = cdist(np.column_stack((ch1.rts, ch1.mzs)),
                   np.column_stack((ch2.rts, ch2.mzs)), 'cityblock')
@@ -124,8 +124,8 @@ def mid_mz_dist(ch1, ch2):
     return abs(ch1.mid[1] - ch2.mid[1])
 
 
-def calc_two_ch_sets_dists(chromatograms1: list[Chromatogram],
-                           chromatograms2: list[Chromatogram],
+def calc_two_ch_sets_dists(chromatograms1: List[Chromatogram],
+                           chromatograms2: List[Chromatogram],
                            sinkhorn_upper_bound=40,
                            mz_mid_upper_bound=float("inf")):
     # dist to empty chromatogram is inf
