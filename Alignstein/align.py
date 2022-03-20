@@ -11,6 +11,8 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 import pyopenms
+from Alignstein.parse import (openms_feature_to_feature,
+                              parse_chromatogram_file, features_to_weight)
 from MassSinkhornmetry import distance_dense
 from scipy.spatial.distance import cdist
 from tqdm import tqdm
@@ -23,12 +25,12 @@ from .mfmc import match_chromatograms
 
 # TODO read about better practices in importing
 
-def feature_from_file_features_to_chromatograms(input_map, features, w):
+def feature_from_file_features_to_chromatograms(input_map, openms_features, w):
     chromatograms = []
-    for f in features:
-        ch = feature_to_chromatogram(f, input_map, w)
+    for oms_f in openms_features:
+        ch = openms_feature_to_feature(oms_f, input_map, w)
         if not ch.empty:
-            ch.feature_id = [f.intesity, f.rt, f.mz]
+            ch.feature_id = [oms_f.intesity, oms_f.rt, oms_f.mz]
             ch.cut_smallest_peaks(0.001)
             chromatograms.append(ch)
     return chromatograms
@@ -57,7 +59,7 @@ def parse_feature_with_model_xml(filename):
 
 
 def feature_from_file_experiment_chromatogram_set(filename, features_filename):
-    input_map = parse_ms1_xml(filename)
+    input_map = parse_chromatogram_file(filename)
     features = parse_feature_with_model_xml(features_filename)
     weight = features_to_weight(features)
     print("Parsed file", filename, "\n", features.size(),

@@ -73,6 +73,7 @@ def parse_chromatogram_file(filename):
     list of Chromatogram
         Detected openms_featues
     """
+    # Warn user that it is ms1 or change name to smth beter
     file_extension = os.path.splitext(filename)[-1].lower()
     if file_extension == ".mzml":
         return parse_ms1_mzml(filename)
@@ -111,11 +112,11 @@ def features_to_weight(openms_features):
         *gather_widths_lengths(openms_features))
 
 
-def openms_feature_to_chromatogram_subset(openms_feature, input_map, weight):
+def openms_feature_to_feature(openms_feature, input_map, weight):
     """
     Gather signal from chromatogram contained in feature bounding box.
 
-    Feature with gathered signal is a chromaotgrams subset so we represent it
+    Feature with gathered signal is a chromatograms subset, so we represent it
     using Chromatograms class.
 
     Algorithm scheme:
@@ -130,8 +131,8 @@ def openms_feature_to_chromatogram_subset(openms_feature, input_map, weight):
         OpenMS-like object for representing feature.
     input_map : pyopenms.InputMap
         Parsed chromatogram.
-    weight : float
-        Weight by which RT should scaled.
+    weight : float or None
+        Weight by which RT should scaled. If None then RT not scaled.
 
     Returns
     -------
@@ -156,12 +157,13 @@ def openms_feature_to_chromatogram_subset(openms_feature, input_map, weight):
     if len(rts) == 0:
         print("zero length", weight)
     ch = Chromatogram(rts, mzs, ints, weight)
-    ch.scale_rt()
-    ch.normalize()
+    if weight is not None:
+        ch.scale_rt()
+    ch.normalize(keep_old=True)
     return ch
 
 
-def openms_features_to_chromatogram_subsets(input_map, openms_features, weight):
+def openms_features_to_features(input_map, openms_features, weight=None):
     """
     Gather signal over all OpenMS-like features.
 
@@ -175,7 +177,7 @@ def openms_features_to_chromatogram_subsets(input_map, openms_features, weight):
     input_map : pyopenms.InputMap
         Parsed chromatogram.
     weight : float
-        Weight by which RT should scaled.
+        Weight by which RT should scaled. If None then RT not scaled
 
     Returns
     -------
@@ -187,11 +189,11 @@ def openms_features_to_chromatogram_subsets(input_map, openms_features, weight):
     # subsets, i.e. openms_features.
     for f in openms_features:
         chromatograms.append(
-            openms_feature_to_chromatogram_subset(f, input_map, weight))
+            openms_feature_to_feature(f, input_map, weight))
     return chromatograms
 
 
-def detect_features_from_file(filename):
+def detect_features_from_file(filename, should_scale=False):
     """
     Parse and detect featues from chromatogram contained in file.
 
@@ -203,6 +205,8 @@ def detect_features_from_file(filename):
     ----------
     filename : str
         input chromatogram filename
+    should_scale : bool
+        should feature have scaled RT?
 
     Returns
     -------
@@ -210,8 +214,10 @@ def detect_features_from_file(filename):
         Iterable of parsed features represented as chromatograms subsets.
     """
     input_map = parse_chromatogram_file(filename)
-    features = find_features(input_map)
-    weight = features_to_weight(features)
-    print("Parsed file", filename, "\n", features.size(),
+    openms_features = find_features(input_map)
+    weight = features_to_weight(openms_features)
+    # TODO FIXME XXX move weight for user to decide if should be one or average
+    print("Parsed file", filename, "\n", openms_features.size(),
           "openms_featues found,\nAverage lenght to width:", weight)
-    return openms_features_to_chromatogram_subsets(input_map, features, weight)
+    return openms_features_to_features(input_map, openms_features,
+                                       weight if should_scale else None)

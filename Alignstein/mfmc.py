@@ -60,7 +60,7 @@ def match_chromatograms_gathered_by_clusters(ch_dists, clusters, penalty=40):
         G.add_edge((0, "s"), (1, i), capacity=1)
         G.add_edge((1, i), (-1, "trash"), capacity=1,
                    weight=penalty * ROUNDING_COEF)
-    # TODO think how much trash should be
+
     if ch_dists.shape[0] > len(clusters_unique):
         # if equal, add no extra rubbish path
         G.add_edge((-1, "trash"), (0, "t"),

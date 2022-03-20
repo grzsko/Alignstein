@@ -3,48 +3,52 @@ from scipy.spatial import Delaunay
 
 
 def custom_scale(rts, constant, other_constant=4):
-    return rts / float(constant) / other_constant
+    # return rts / float(constant) / other_constant
+    # Exemplary custom scale
+    return np.log(rts + 1)
 
 
 def id_scale(rts, *other):
     return rts
 
 
-def constant_scale(rts, constant):
-    return rts / float(constant)
+def constant_scale(rts, constant, other_constant=1):
+    return rts / float(constant) / float(other_constant)
 
-
-# def custom_scale(rts, constants):
-#     # TODO
-#     pass
 
 def RT_scale(*args, **kwargs):
-    #     return constant_scale(*args, **kwargs)
-    return custom_scale(*args, **kwargs)
+        return constant_scale(*args, **kwargs)
+    # return custom_scale(*args, **kwargs)
 
 
 class Chromatogram:
+    """Class representing chromatogram or chromatogram subset."""
+
     # Assuming that MS1 and MS2 are centroided
-    def __init__(self, rts, mzs, ints, weight=1, extra_weight=1):
+    def __init__(self, rts, mzs, ints, weight=1):
         self.empty = len(rts) == 0
         self.rts = np.array(rts)
         self.mzs = np.array(mzs)
         self.ints = np.array(ints)
         #         self.tic = np.sum(ints)
-        self.weight = weight * extra_weight
+        self.weight = weight
         if not self.empty:
             self.mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
         self.hull = None
 
-    def normalize(self, target_value=1.0):
+    def normalize(self, target_value=1.0, keep_old=False):
         """
         Normalize the intensity values so that they sum up to the target value.
         """
         if not self.empty and self.tic != target_value:
+            if keep_old:
+                self.nonnormalized_ints = np.copy(self.ints)
             self.ints = target_value / self.tic * self.ints
 
-    def scale_rt(self):
-        self.rts = RT_scale(self.rts, self.weight)
+    def scale_rt(self, external_weight=None):
+        self.rts = RT_scale(self.rts,
+                            self.weight if external_weight is None else external_weight)
+        # TODO mid sometimes should be recalculated, move mid as property or somthing effectively stored
         self.mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
         self.hull = None
 
@@ -59,6 +63,10 @@ class Chromatogram:
     def tic(self):
         return np.sum(self.ints)
 
+    # @property
+    # def mid(self):
+    #     return np.array([np.mean(self.rts), np.mean(self.mzs)])
+
     def __len__(self):
         return len(self.rts)
 
@@ -66,7 +74,7 @@ class Chromatogram:
     def sum_chromatograms(chromatograms_iterable):
         total_length = np.sum([len(ch) for ch in chromatograms_iterable])
         if total_length == 0:
-            return Chromatogram([], [], []) # empty chromatogram
+            return Chromatogram([], [], [])  # empty chromatogram
         rts = np.empty(total_length, dtype=np.float)
         mzs = np.empty(total_length, dtype=np.float)
         ints = np.empty(total_length, dtype=np.float)

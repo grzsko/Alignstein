@@ -2,12 +2,17 @@ import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 
 from .align import calc_two_ch_sets_dists  # , align_chromatogram_sets
-from .mfmc import match_chromatograms, match_chromatograms_gathered_by_clusters
+from .mfmc import match_chromatograms_gathered_by_clusters
 
 
 def gather_mids(chromatograms_sets_list):
     """
     Gather M/Zs and RTs centroids from all chromatograms and chromatogram sets.
+
+    Parameters
+    ----------
+    chromatograms_sets_list : iterable of iterable of Chromatogram
+        openms_featues gethered by input chromatograms
     """
 
     mzs = []
@@ -43,21 +48,22 @@ def flatten_chromatograms(chromatograms_sets_list, clusters,
     filtered_clusters = []
 
     first_chromatogram_index = 0
-    # TODO rename every chromatogram set to feature
+    # TODO rename every chromatogram set to openms_feature
     for i, one_sample_chromatogram_set in enumerate(chromatograms_sets_list):
         if i not in exclude_chromatogram_sets:
             for chromatogram in one_sample_chromatogram_set:
                 flat_chromatograms.append(chromatogram)
             filtered_clusters.extend(
                 clusters[first_chromatogram_index:
-                         first_chromatogram_index + len(one_sample_chromatogram_set)
+                         first_chromatogram_index + len(
+                             one_sample_chromatogram_set)
                 ])
         first_chromatogram_index += len(one_sample_chromatogram_set)
     assert first_chromatogram_index == len(clusters)
     return flat_chromatograms, filtered_clusters
 
 
-def find_consensus_features(clusters, #chromatogram_indices,
+def find_consensus_features(clusters,
                             features_per_samples,
                             sinkhorn_upper_bound=40, flow_trash_penalty=5,
                             turns=1):
@@ -93,11 +99,12 @@ def find_consensus_features(clusters, #chromatogram_indices,
 
 
 def precluster_mids(mids, distance_threshold=20):
-    return MiniBatchKMeans(n_clusters=16, init='k-means++', max_iter=100,
-                           batch_size=100, verbose=0, compute_labels=True,
-                           random_state=None, tol=0.0, max_no_improvement=10,
-                           init_size=None, n_init=3,
-                           reassignment_ratio=0.01).fit_predict(mids)
+    return np.array(
+        MiniBatchKMeans(n_clusters=16, init='k-means++', max_iter=100,
+                        batch_size=100, verbose=0, compute_labels=True,
+                        random_state=None, tol=0.0, max_no_improvement=10,
+                        init_size=None, n_init=3,
+                        reassignment_ratio=0.01).fit_predict(mids))
 
 
 def big_clusters_to_clusters(mids, big_clusters, distance_threshold=5):
