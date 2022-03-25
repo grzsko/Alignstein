@@ -1,0 +1,9 @@
+setuptools
+pyopenms
+numpy
+networkx
+tqdm
+scikit-learn
+scipy
+MassSinkhornmetry
+Alignstein

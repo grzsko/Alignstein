@@ -10,7 +10,6 @@ Arguments:
 import xml.etree.ElementTree as ET
 
 import numpy as np
-import pyopenms
 from Alignstein.parse import (openms_feature_to_feature,
                               parse_chromatogram_file, features_to_weight)
 from MassSinkhornmetry import distance_dense
