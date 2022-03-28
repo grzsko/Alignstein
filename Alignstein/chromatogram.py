@@ -17,12 +17,12 @@ def constant_scale(rts, constant, other_constant=1):
 
 
 def RT_scale(*args, **kwargs):
-        return constant_scale(*args, **kwargs)
+    return constant_scale(*args, **kwargs)
     # return custom_scale(*args, **kwargs)
 
 
 class Chromatogram:
-    """Class representing chromatogram or chromatogram subset."""
+    """Class representing chromatogram or chromatogram subset (i.e. feature)."""
 
     # Assuming that MS1 and MS2 are centroided
     def __init__(self, rts, mzs, ints, weight=1):
@@ -107,3 +107,15 @@ class Chromatogram:
             self.hull = Delaunay(np.c_[self.rts, self.mzs])
 
         return np.any(self.hull.find_simplex(points) >= 0)
+
+    def get_bounding_box(self):
+        """
+        Get coordinates defining chromatogram set bounding box.
+
+        Returns
+        -------
+        tuple
+            Max. RT, max. M/Z, min. RT, min. MZ
+        """
+        return (np.max(self.rts), np.max(self.mzs),
+                np.min(self.rts), np.min(self.mzs))

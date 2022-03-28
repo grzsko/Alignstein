@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 import pyopenms
 import numpy as np
@@ -84,16 +85,27 @@ def parse_chromatogram_file(filename):
     else:
         raise ValueError("Filetype {} not supported for file {}".format(
             file_extension, filename))
-    # TODO refactor to lesser code repetitions
 
 
-def gather_widths_lengths(openms_featues):
+def gather_widths_lengths(feature_set: list[Chromatogram]):
+    """
+    Collect features' widths and lengths.
+
+    Parameters
+    ----------
+    feature_set : iterable of Chromatogram
+        Features for which widths and lengths will  be collected.
+
+    Returns
+    -------
+    tuple of lists
+        Tuple containing features lengths and widths.
+
+    """
     lengths_rt = []
     widths_mz = []
-    for f in openms_featues:
-        ch = f.getConvexHull()
-        rt_max, mz_max = ch.getBoundingBox().maxPosition()
-        rt_min, mz_min = ch.getBoundingBox().minPosition()
+    for f in feature_set:
+        rt_max, mz_max, rt_min, mz_min = f.get_bounding_box()
         lengths_rt.append(rt_max - rt_min)
         widths_mz.append(mz_max - mz_min)
 
@@ -103,16 +115,37 @@ def gather_widths_lengths(openms_featues):
     return lengths_rt, widths_mz
 
 
-def get_weight_from_widths_lengths(lengths_rt, widths_mz):
+def openms_feature_bounding_box(openms_feature):
+    ch = openms_feature.getConvexHull()
+    rt_max, mz_max = ch.getBoundingBox().maxPosition()
+    rt_min, mz_min = ch.getBoundingBox().minPosition()
+    return rt_max, mz_max, rt_min, mz_min
+
+
+def get_weight(lengths_rt, widths_mz):
+    """
+    Compute factor by which RT should be scaled.
+
+    Parameters
+    ----------
+    lengths_rt : iterable of float
+        Features lengths.
+    widths_mz : iterable of float
+        Features widths.
+
+    Returns
+    -------
+    float
+        Average feature length to width.
+    """
     return np.mean(lengths_rt) / np.mean(widths_mz)
 
 
-def features_to_weight(openms_features):
-    return get_weight_from_widths_lengths(
-        *gather_widths_lengths(openms_features))
+def features_to_weight(features):
+    return get_weight(*gather_widths_lengths(features))
 
 
-def openms_feature_to_feature(openms_feature, input_map, weight):
+def openms_feature_to_feature(openms_feature, input_map, weight=None):
     """
     Gather signal from chromatogram contained in feature bounding box.
 
@@ -146,10 +179,10 @@ def openms_feature_to_feature(openms_feature, input_map, weight):
     rts = []
     ints = []
 
-    for open_spectrum in input_map:
-        rt = open_spectrum.getRT()
+    for openms_spectrum in input_map:  # indeed, it's a spectrum (single scan)
+        rt = openms_spectrum.getRT()
         if min_rt <= rt <= max_rt:
-            for mz, i in zip(*open_spectrum.get_peaks()):
+            for mz, i in zip(*openms_spectrum.get_peaks()):
                 if min_mz <= mz <= max_mz:
                     mzs.append(mz)
                     rts.append(rt)
@@ -165,7 +198,7 @@ def openms_feature_to_feature(openms_feature, input_map, weight):
 
 def openms_features_to_features(input_map, openms_features, weight=None):
     """
-    Gather signal over all OpenMS-like features.
+    Gather signal over all OpenMS-like features and create Alignstein features.
 
     We represent features with gathered signal as a subset of chromatogram so
     we use Chromatogram class.
@@ -186,7 +219,7 @@ def openms_features_to_features(input_map, openms_features, weight=None):
     """
     chromatograms = []
     # Chromatogram class is universal, so we use it to represent chromatograms
-    # subsets, i.e. openms_features.
+    # subsets, i.e. features.
     for f in openms_features:
         chromatograms.append(
             openms_feature_to_feature(f, input_map, weight))
@@ -215,9 +248,11 @@ def detect_features_from_file(filename, should_scale=False):
     """
     input_map = parse_chromatogram_file(filename)
     openms_features = find_features(input_map)
-    weight = features_to_weight(openms_features)
-    # TODO FIXME XXX move weight for user to decide if should be one or average
+    if should_scale:
+        weight = features_to_weight(openms_features)
+        print("Average length to width:", weight)
     print("Parsed file", filename, "\n", openms_features.size(),
-          "openms_featues found,\nAverage lenght to width:", weight)
-    return openms_features_to_features(input_map, openms_features,
-                                       weight if should_scale else None)
+          "OpenMS features found,\n")
+    features = openms_features_to_features(
+        input_map, openms_features, weight if should_scale else None)
+    return features

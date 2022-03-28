@@ -6,4 +6,4 @@ tqdm
 scikit-learn
 scipy
 MassSinkhornmetry
-Alignstein
+docopt
