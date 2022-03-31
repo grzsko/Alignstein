@@ -32,8 +32,7 @@ class Chromatogram:
         self.ints = np.array(ints)
         #         self.tic = np.sum(ints)
         self.weight = weight
-        if not self.empty:
-            self.mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
+        self._mid = None
         self.hull = None
 
     def normalize(self, target_value=1.0, keep_old=False):
@@ -46,10 +45,10 @@ class Chromatogram:
             self.ints = target_value / self.tic * self.ints
 
     def scale_rt(self, external_weight=None):
-        self.rts = RT_scale(self.rts,
-                            self.weight if external_weight is None else external_weight)
-        # TODO mid sometimes should be recalculated, move mid as property or somthing effectively stored
-        self.mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
+        self.rts = RT_scale(
+            self.rts,
+            self.weight if external_weight is None else external_weight)
+        self._mid = None
         self.hull = None
 
     def plot(self, ax):
@@ -63,9 +62,21 @@ class Chromatogram:
     def tic(self):
         return np.sum(self.ints)
 
-    # @property
-    # def mid(self):
-    #     return np.array([np.mean(self.rts), np.mean(self.mzs)])
+    @property
+    def mid(self):
+        """
+        Calculate chromatogram (subset) ceintroid.
+
+        Returns
+        -------
+        tuple of floats
+            Centroid of chromatogram subset.
+        """
+        if self.empty:
+            return None
+        if self._mid is None:
+            self._mid = np.array([np.mean(self.rts), np.mean(self.mzs)])
+        return self._mid
 
     def __len__(self):
         return len(self.rts)
