@@ -5,7 +5,7 @@ LC-MS alignment algorithm based on Wasserstein distance.
 
 Installation
 ------------
-1. Obtain MassSinkhornmetry package from https://github.com/grzsko/MS_scaling and install into environment.
+1. Obtain MassSinkhornmetry package from https://github.com/grzsko/MassSinkhornmetry and install into environment.
 2. Install requirements `pip install -r requirements.txt`.
 3. Install Alignstein into your environment: `python setup.py develop` (it is still under development, so be ready for continuous updating :-D)
 
