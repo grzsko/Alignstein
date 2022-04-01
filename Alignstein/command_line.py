@@ -23,24 +23,26 @@ if __name__ == "__main__":
     arguments = docopt(__doc__)
 
     if len(arguments["-f"]) == 0:
-        chromatograms_sets_list = [detect_features_from_file(filename) for
-                                   filename in arguments["MZML_FILE"]]
+        feature_sets_list = [
+            detect_features_from_file(fname) for fname in arguments["MZML_FILE"]
+        ]
     else:
-        chromatograms_sets_list = parse_feature_from_file_alignment_experiment_chromatogram_sets(
-            arguments["MZML_FILE"], arguments["-f"])
-    # TODO Extracting average scaling factor
+        feature_sets_list = [
+            parse_chromatogram_with_detected_features(ch_fname, fs_fname)
+            for ch_fname, fs_fname in zip(arguments["MZML_FILE"],
+                                          arguments["-f"])]
     if len(arguments["MZML_FILE"]) > 2:
-        mids, ch_indices = gather_mids(chromatograms_sets_list)
+        mids, ch_indices = gather_mids(feature_sets_list)
 
         big_clusters = precluster_mids(mids, distance_threshold=20)
         clusters = big_clusters_to_clusters(mids, big_clusters,
                                             distance_threshold=30)
         consensus_features, matched_all_sets = find_consensus_features(
-            clusters, chromatograms_sets_list,
+            clusters, feature_sets_list,
             sinkhorn_upper_bound=20, flow_trash_penalty=5
         )
     else:
         consensus_features, matched_all_sets = find_pairwise_consensus_features(
-                *chromatograms_sets_list, sinkhorn_upper_bound=20, flow_trash_penalty=5)
+                *feature_sets_list, sinkhorn_upper_bound=20, flow_trash_penalty=5)
     dump_consensus_features(consensus_features, "align.out",
-                            chromatograms_sets_list)
+                            feature_sets_list)

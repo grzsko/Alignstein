@@ -7,89 +7,29 @@ Arguments:
     MZML_FILE       names of files with chromatograms to be aligned
 
 """
-import xml.etree.ElementTree as ET
 
 import numpy as np
-from Alignstein.parse import (openms_feature_to_feature,
-                              parse_chromatogram_file, features_to_weight)
-from MassSinkhornmetry import distance_dense
 from scipy.spatial.distance import cdist
 from tqdm import tqdm
+from MassSinkhornmetry import distance_dense
 
-
-from .OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
 from .chromatogram import Chromatogram
 from .mfmc import match_chromatograms
 
 
-# TODO read about better practices in importing
-
-def feature_from_file_features_to_chromatograms(input_map, openms_features, w):
-    chromatograms = []
-    for oms_f in openms_features:
-        ch = openms_feature_to_feature(oms_f, input_map, w)
-        if not ch.empty:
-            ch.feature_id = [oms_f.intesity, oms_f.rt, oms_f.mz]
-            ch.cut_smallest_peaks(0.001)
-            chromatograms.append(ch)
-    return chromatograms
-
-
-def parse_feature_with_model_xml(filename):
-    features = MyCollection()
-    tree = ET.parse(filename)
-    root = tree.getroot()
-    feature_list = root.find("./featureList")
-    for i, feature in enumerate(feature_list.findall("./openms_feature")):
-        convex_hull = feature.find("./convexhull")
-        points = []
-        for hullpoint in convex_hull.findall("./hullpoint"):
-            positions = {int(position.attrib["dim"]): float(position.text)
-                         for position in hullpoint.findall("./hposition")}
-            points.append((positions[0], positions[1]))
-        if len(points) > 2:
-            mimicry_feature = OpenMSFeatureMimicry(points)
-            # mimicry_feature.caap_id = i
-            features.append(mimicry_feature)
-        else:
-            print("Skipping small openms_feature, id:", feature.attrib["id"])
-            continue
-    return features
-
-
-def feature_from_file_experiment_chromatogram_set(filename, features_filename):
-    input_map = parse_chromatogram_file(filename)
-    features = parse_feature_with_model_xml(features_filename)
-    weight = features_to_weight(features)
-    print("Parsed file", filename, "\n", features.size(),
-          "openms_featues found,\nAverage lenght to width:", weight)
-    return feature_from_file_features_to_chromatograms(input_map, features,
-                                                       weight)
-
-
-def parse_feature_from_file_alignment_experiment_chromatogram_sets(
-        chromatogram_filenames, features_filenames):
-    ch_sets_list = []
-    for ch_fname, f_fname in zip(chromatogram_filenames, features_filenames):
-        ch_sets_list.append(
-            feature_from_file_experiment_chromatogram_set(ch_fname, f_fname))
-
-    return ch_sets_list
-
-
-def gather_ch_mzs_rts(features):
-    rts = []
-    mzs = []
-    features_nb = []
-    for f_i, f in enumerate(features):
-        for ch in f.getConvexHulls():
-            for rt, mz in ch.getHullPoints():
-                rts.append(rt)
-                mzs.append(mz)
-                features_nb.append(f_i)
-    #     rts.append(f.getRT())
-    #     mzs.append(f.getMZ())
-    return rts, mzs, features_nb
+# def gather_ch_mzs_rts(features):
+#     rts = []
+#     mzs = []
+#     features_nb = []
+#     for f_i, f in enumerate(features):
+#         for ch in f.getConvexHulls():
+#             for rt, mz in ch.getHullPoints():
+#                 rts.append(rt)
+#                 mzs.append(mz)
+#                 features_nb.append(f_i)
+#     #     rts.append(f.getRT())
+#     #     mzs.append(f.getMZ())
+#     return rts, mzs, features_nb
 
 
 # def gather_ch_stats_over_exps(dirname):
@@ -113,7 +53,7 @@ def gather_ch_mzs_rts(features):
 def chromatogram_dist(ch1, ch2, penalty=40):
     dists = cdist(np.column_stack((ch1.rts, ch1.mzs)),
                   np.column_stack((ch2.rts, ch2.mzs)), 'cityblock')
-    return distance_dense(ch1.ints, ch2.ints, dists=dists, eps=1, lam=penalty,
+    return distance_dense(ch1.ints, ch2.ints, dists=dists, eps=0.1, lam=penalty,
                           method="TV")
 
 

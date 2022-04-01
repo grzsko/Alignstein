@@ -1,9 +1,10 @@
 import os
-from typing import List
+import xml.etree.ElementTree as ET
 
-import pyopenms
 import numpy as np
+import pyopenms
 
+from .OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
 from .chromatogram import Chromatogram
 
 
@@ -44,6 +45,19 @@ def parse_ms1_mzml(filename):
 
 
 def find_features(input_map):
+    """
+    Detect features using OpenMS FeatureFinderCentroid algorithm.
+
+    Parameters
+    ----------
+    input_map : pyopenms.InputMap
+        chromatogram, which features should be detected
+
+    Returns
+    -------
+    pyopenms.FeatureMap
+        Features detected by OpenMS
+    """
     ff = pyopenms.FeatureFinder()
     ff.setLogType(pyopenms.LogType.CMD)
 
@@ -62,7 +76,7 @@ def find_features(input_map):
 
 def parse_chromatogram_file(filename):
     """
-    Detect openms_featues in chromatogram in file.
+    Parse data contained in chromatogram file.
 
     Parameters
     ----------
@@ -71,10 +85,10 @@ def parse_chromatogram_file(filename):
 
     Returns
     -------
-    list of Chromatogram
-        Detected openms_featues
+    pyopenms.MSExperiment
+        Chromatogram parsed by OpenMS
     """
-    # Warn user that it is ms1 or change name to smth beter
+    # Warn user that it is ms1 or change name to smth better
     file_extension = os.path.splitext(filename)[-1].lower()
     if file_extension == ".mzml":
         return parse_ms1_mzml(filename)
@@ -192,6 +206,17 @@ def openms_feature_to_feature(openms_feature, input_map):
     return ch
 
 
+# def feature_from_file_features_to_chromatograms(input_map, openms_features):
+#     features = []
+#     for oms_f in openms_features:
+#         f = openms_feature_to_feature(oms_f, input_map)
+#         if not f.empty:
+#             f.feature_id = [oms_f.intensity, oms_f.rt, oms_f.mz]
+#             # TODO change to ext_id
+#             f.cut_smallest_peaks(0.001)
+#             features.append(f)
+#     return features
+
 def openms_features_to_features(input_map, openms_features):
     """
     Gather signal over all OpenMS-like features and create Alignstein features.
@@ -205,8 +230,6 @@ def openms_features_to_features(input_map, openms_features):
         Iterable with OpenMS-like objects representing features.
     input_map : pyopenms.InputMap
         Parsed chromatogram.
-    weight : float
-        Weight by which RT should scaled. If None then RT not scaled
 
     Returns
     -------
@@ -221,9 +244,9 @@ def openms_features_to_features(input_map, openms_features):
     return chromatograms
 
 
-def detect_features_from_file(filename, should_scale=False):
+def detect_features_from_file(filename):
     """
-    Parse and detect featues from chromatogram contained in file.
+    Parse and detect features from chromatogram contained in file.
 
     This function parses chromatograms contained in file names `filename`,
     detects features, collects all signal contained within features and
@@ -245,3 +268,91 @@ def detect_features_from_file(filename, should_scale=False):
           "OpenMS features found,\n")
     features = openms_features_to_features(input_map, openms_features)
     return features
+
+
+def parse_features_from_file(filename):
+    """
+    Parse features from featureXML file.
+
+    Parameters
+    ----------
+    filename : str
+        Filename of features (.featureXML) to be parsed. Must have same order
+        as chromatograms_filenames. Every feature of file should contain field
+        convexhull which describes the spatial properties of features.
+
+    Returns
+    -------
+    list of OpenMSMimicry
+        Parsed features with API conforming pyopenms API.
+    """
+    features = MyCollection()
+    tree = ET.parse(filename)
+    root = tree.getroot()
+    feature_list = root.find("./featureList")
+    for i, feature in enumerate(feature_list.findall("./feature")):
+        convex_hull = feature.find("./convexhull")
+        points = []
+        for hullpoint in convex_hull.findall("./hullpoint"):
+            positions = {int(position.attrib["dim"]): float(position.text)
+                         for position in hullpoint.findall("./hposition")}
+            points.append((positions[0], positions[1]))
+        if len(points) > 2:
+            mimicry_feature = OpenMSFeatureMimicry(points)
+            # mimicry_feature.ext_id = i
+            features.append(mimicry_feature)
+        else:
+            print("Skipping small openms_feature, id:", feature.attrib["id"])
+            continue
+    return features
+
+
+def parse_chromatogram_with_detected_features(filename, features_filename):
+    """
+    Parse chromatogram with provided featureXML file.
+
+    Parameters
+    ----------
+    filename : str
+        Filename of chromatogram to be parsed.
+    features_filename : str
+        Filename of features (.featureXML) to be parsed. Must have the same
+        order as chromatograms_filenames. Every feature of file should contain
+        field convexhull which describes the spatial properties of features.
+
+    Returns
+    -------
+    list of Chromatogram
+        Parsed features with collected signal.
+    """
+    input_map = parse_chromatogram_file(filename)
+    features = parse_features_from_file(features_filename)
+    print("Parsed file", filename, "\n", features.size(),
+          "OpenMS features found.")
+    return openms_features_to_features(input_map, features)
+
+# def parse_chromatograms_and_features(chromatogram_filenames,
+#                                      features_filenames):
+#     """
+#     Parse chromatograms with provided featureXML files.
+#
+#     Parameters
+#     ----------
+#     chromatogram_filenames : iterable of str
+#         Filenames of chromatograms to be parsed.
+#     features_filenames : iterable of str
+#         Filenames of features (.featureXML) to be parsed. Must have same order
+#         as chromatograms_filenames
+#
+#     Returns
+#     -------
+#     list of lists of Chromatogram
+#         Parsed features with collected signal for consecutive chromatogram files.
+#     """
+#     feature_sets_list = []
+#     for chromatogram_fname, features_fname in zip(chromatogram_filenames,
+#                                                   features_filenames):
+#         feature_sets_list.append(
+#             parse_chromatogram_with_detected_features(
+#                 chromatogram_fname, features_fname))
+#     return feature_sets_list
