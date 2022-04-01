@@ -25,13 +25,13 @@ class Chromatogram:
     """Class representing chromatogram or chromatogram subset (i.e. feature)."""
 
     # Assuming that MS1 and MS2 are centroided
-    def __init__(self, rts, mzs, ints, weight=1):
+    def __init__(self, rts, mzs, ints):
         self.empty = len(rts) == 0
         self.rts = np.array(rts)
         self.mzs = np.array(mzs)
         self.ints = np.array(ints)
         #         self.tic = np.sum(ints)
-        self.weight = weight
+        self._weight = None
         self._mid = None
         self.hull = None
 
@@ -44,10 +44,9 @@ class Chromatogram:
                 self.nonnormalized_ints = np.copy(self.ints)
             self.ints = target_value / self.tic * self.ints
 
-    def scale_rt(self, external_weight=None):
-        self.rts = RT_scale(
-            self.rts,
-            self.weight if external_weight is None else external_weight)
+    def scale_rt(self, weight):
+        self.rts = RT_scale(self.rts, weight)
+        self._weight = weight
         self._mid = None
         self.hull = None
 

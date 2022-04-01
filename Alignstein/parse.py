@@ -145,7 +145,7 @@ def features_to_weight(features):
     return get_weight(*gather_widths_lengths(features))
 
 
-def openms_feature_to_feature(openms_feature, input_map, weight=None):
+def openms_feature_to_feature(openms_feature, input_map):
     """
     Gather signal from chromatogram contained in feature bounding box.
 
@@ -164,8 +164,6 @@ def openms_feature_to_feature(openms_feature, input_map, weight=None):
         OpenMS-like object for representing feature.
     input_map : pyopenms.InputMap
         Parsed chromatogram.
-    weight : float or None
-        Weight by which RT should scaled. If None then RT not scaled.
 
     Returns
     -------
@@ -188,15 +186,13 @@ def openms_feature_to_feature(openms_feature, input_map, weight=None):
                     rts.append(rt)
                     ints.append(i)
     if len(rts) == 0:
-        print("zero length", weight)
-    ch = Chromatogram(rts, mzs, ints, weight)
-    if weight is not None:
-        ch.scale_rt()
+        print("zero length")
+    ch = Chromatogram(rts, mzs, ints)
     ch.normalize(keep_old=True)
     return ch
 
 
-def openms_features_to_features(input_map, openms_features, weight=None):
+def openms_features_to_features(input_map, openms_features):
     """
     Gather signal over all OpenMS-like features and create Alignstein features.
 
@@ -221,8 +217,7 @@ def openms_features_to_features(input_map, openms_features, weight=None):
     # Chromatogram class is universal, so we use it to represent chromatograms
     # subsets, i.e. features.
     for f in openms_features:
-        chromatograms.append(
-            openms_feature_to_feature(f, input_map, weight))
+        chromatograms.append(openms_feature_to_feature(f, input_map))
     return chromatograms
 
 
@@ -238,8 +233,6 @@ def detect_features_from_file(filename, should_scale=False):
     ----------
     filename : str
         input chromatogram filename
-    should_scale : bool
-        should feature have scaled RT?
 
     Returns
     -------
@@ -248,11 +241,7 @@ def detect_features_from_file(filename, should_scale=False):
     """
     input_map = parse_chromatogram_file(filename)
     openms_features = find_features(input_map)
-    if should_scale:
-        weight = features_to_weight(openms_features)
-        print("Average length to width:", weight)
     print("Parsed file", filename, "\n", openms_features.size(),
           "OpenMS features found,\n")
-    features = openms_features_to_features(
-        input_map, openms_features, weight if should_scale else None)
+    features = openms_features_to_features(input_map, openms_features)
     return features

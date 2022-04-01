@@ -5,21 +5,21 @@ from .align import calc_two_ch_sets_dists  # , align_chromatogram_sets
 from .mfmc import match_chromatograms_gathered_by_clusters
 
 
-def gather_mids(chromatograms_sets_list):
+def gather_mids(feature_sets_list):
     """
     Gather M/Zs and RTs centroids from all chromatograms and chromatogram sets.
 
     Parameters
     ----------
-    chromatograms_sets_list : iterable of iterable of Chromatogram
-        openms_featues gethered by input chromatograms
+    feature_sets_list : iterable of iterable of Chromatogram
+        openms_featues gathered by input chromatograms
     """
 
     mzs = []
     rts = []
     # it turns out that the best solution is to do it on python ordinary lists
     chromatogram_indices: list[tuple[int, int]] = []
-    for i, chromatogram_set in enumerate(chromatograms_sets_list):
+    for i, chromatogram_set in enumerate(feature_sets_list):
         for j, chromatogram in enumerate(chromatogram_set):
             mzs.append(np.mean(chromatogram.mzs))
             rts.append(np.mean(chromatogram.rts))
