@@ -22,6 +22,7 @@ from parse import *
 if __name__ == "__main__":
     arguments = docopt(__doc__)
 
+    # Parsing
     if len(arguments["-f"]) == 0:
         feature_sets_list = [
             detect_features_from_file(fname) for fname in arguments["MZML_FILE"]
@@ -31,6 +32,15 @@ if __name__ == "__main__":
             parse_chromatogram_with_detected_features(ch_fname, fs_fname)
             for ch_fname, fs_fname in zip(arguments["MZML_FILE"],
                                           arguments["-f"])]
+    # RT scaling
+    C = 5  # We scale additionaly by 5, to make RT more smashed, it works fine.
+    weights = [features_to_weight(f_set) for f_set in feature_sets_list]
+    average_weight = np.mean(weights)
+    for feature_set in feature_sets_list:
+        for feature in feature_set:
+            feature.scale_rt(average_weight * C)
+
+    # Aligning
     if len(arguments["MZML_FILE"]) > 2:
         mids, ch_indices = gather_mids(feature_sets_list)
 
@@ -44,5 +54,7 @@ if __name__ == "__main__":
     else:
         consensus_features, matched_all_sets = find_pairwise_consensus_features(
                 *feature_sets_list, sinkhorn_upper_bound=20, flow_trash_penalty=5)
+
+    # Dump
     dump_consensus_features(consensus_features, "align.out",
                             feature_sets_list)
