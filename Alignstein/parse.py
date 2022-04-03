@@ -203,6 +203,9 @@ def openms_feature_to_feature(openms_feature, input_map):
         print("zero length")
     ch = Chromatogram(rts, mzs, ints)
     ch.normalize(keep_old=True)
+    if hasattr(openms_feature, 'ext_id'):
+        # Sometimes it is useful to have some information from other software
+        ch.ext_id = openms_feature.ext_id
     return ch
 
 
@@ -299,7 +302,7 @@ def parse_features_from_file(filename):
             points.append((positions[0], positions[1]))
         if len(points) > 2:
             mimicry_feature = OpenMSFeatureMimicry(points)
-            # mimicry_feature.ext_id = i
+            mimicry_feature.ext_id = i
             features.append(mimicry_feature)
         else:
             print("Skipping small openms_feature, id:", feature.attrib["id"])
