@@ -15,9 +15,9 @@ Options:
 
 from docopt import docopt
 
-from align import *
-from multialign import *
-from parse import *
+from .align import *
+from .multialign import *
+from .parse import *
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
