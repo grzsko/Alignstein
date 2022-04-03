@@ -9,9 +9,9 @@ Arguments:
 """
 
 import numpy as np
+from MassSinkhornmetry import distance_dense
 from scipy.spatial.distance import cdist
 from tqdm import tqdm
-from MassSinkhornmetry import distance_dense
 
 from .chromatogram import Chromatogram
 from .mfmc import match_chromatograms
@@ -50,10 +50,32 @@ from .mfmc import match_chromatograms
 #     return means, variances
 
 
-def chromatogram_dist(ch1, ch2, penalty=40):
-    dists = cdist(np.column_stack((ch1.rts, ch1.mzs)),
-                  np.column_stack((ch2.rts, ch2.mzs)), 'cityblock')
-    return distance_dense(ch1.ints, ch2.ints, dists=dists, eps=0.1, lam=penalty,
+def feature_dist(f1, f2, penalty=40, eps=0.1):
+    """
+    Compute GWD between two features.
+
+    Parameters
+    ----------
+    f1 : Chromatogram
+        One feature
+    f2 : Chromatogram
+        Other feature
+    penalty : float
+        Penalty for not transporting a part of signal, aka the lambda parameter.
+        Can cen interpreted as maximal distance over which signal is
+        transported.
+    eps : float
+        Entropic penalization coefficient, aka the epsilon parameter. Default
+        value is chosen reasonably. Change it only if you understand how it
+        works.
+    Returns
+    -------
+    float
+        A GWD between f1 and f2.
+    """
+    dists = cdist(np.column_stack((f1.rts, f1.mzs)),
+                  np.column_stack((f2.rts, f2.mzs)), 'cityblock')
+    return distance_dense(f1.ints, f2.ints, dists=dists, eps=eps, lam=penalty,
                           method="TV")
 
 
@@ -65,43 +87,74 @@ def mid_mz_dist(ch1, ch2):
     return abs(ch1.mid[1] - ch2.mid[1])
 
 
-def calc_two_ch_sets_dists(chromatograms1: list[Chromatogram],
-                           chromatograms2: list[Chromatogram],
-                           sinkhorn_upper_bound=40,
-                           mz_mid_upper_bound=float("inf")):
-    # dist to empty chromatogram is inf
-    total = len(chromatograms1) * len(chromatograms2)
+def gwd_distance_matrix(chromatograms1: list[Chromatogram],
+                        chromatograms2: list[Chromatogram],
+                        distance_upper_bound=10,
+                        gwd_upper_bound=40,
+                        mz_mid_upper_bound=float("inf"), eps=0.1):
+    """
+    Compute GWD distance matrix between two feature sets.
 
-    ch_dists = np.full((len(chromatograms1), len(chromatograms2)), np.inf)
+    Parameters
+    ----------
+    chromatograms1 : list of Chromatogram
+        First list of features.
+    chromatograms2 : list of Chromatogram
+        First list of features.
+    distance_upper_bound : float
+        Maximum cetroid distance between which GWD. For efficiency reasons
+        should be reasonably small. If centroid distance is larger than
+        distance_upper_bound, infinity is computed.
+    mz_mid_upper_bound :
+        Additional parameter if GDW should computed only for features with
+        centroid M/Z difference lower than this parameter. Usually not used.
+    gwd_upper_bound : float
+        Penalty for not transporting a part of signal, aka the lambda parameter.
+        Can cen interpreted as maximal distance over which signal is
+        transported.
+    eps : float
+        GWD entropic penalization coefficient, aka the epsilon parameter.
+        Default value is chosen reasonably. Change it only if you understand how
+        it works.
+    Returns
+    -------
+    numpy.array
+        GDW distance (or infinity if centroids to distant) matrix between two
+        feature sets.
+    """
+    total = len(chromatograms1) * len(chromatograms2)
+    dists = np.full((len(chromatograms1), len(chromatograms2)), np.inf)
 
     tick = 0
     pbar = tqdm(total=total)
     print("Calculating distances")
+    # TODO Think is parallelization is possible
+    # TODO Make dists sparse
     for i, chi in enumerate(chromatograms1):
         for j, chj in enumerate(chromatograms2):
             if not chi.empty and not chj.empty:
-                if (mid_dist(chi, chj) <= sinkhorn_upper_bound and
+                if (mid_dist(chi, chj) <= distance_upper_bound and
                         mid_mz_dist(chi, chj) < mz_mid_upper_bound):
-                    ch_dists[i, j] = chromatogram_dist(
-                        chi, chj, sinkhorn_upper_bound)
+                    dists[i, j] = feature_dist(
+                        chi, chj, penalty=gwd_upper_bound, eps=eps)
                 tick += 1
                 if tick % 300 == 0:
                     pbar.update(300)
     pbar.close()
-    print("Calculated dists, number of nans:", np.sum(np.isnan(ch_dists)))
+    print("Calculated dists, number of nans:", np.sum(np.isnan(dists)))
     print("All columns have any row non zero:",
-          np.all(np.any(ch_dists < np.inf, axis=0)))
+          np.all(np.any(dists < np.inf, axis=0)))
     print("All rows have any column non zero:",
-          np.all(np.any(ch_dists < np.inf, axis=1)))
-    return ch_dists
+          np.all(np.any(dists < np.inf, axis=1)))
+    return dists
 
 
-# def align_chromatogram_sets(ch_dists, flow_trash_penalty=40):
-#     return match_chromatograms(ch_dists, flow_trash_penalty)
+# def align_chromatogram_sets(ch_dists, matching_penalty=40):
+#     return match_chromatograms(ch_dists, matching_penalty)
 
 
 # def find_consensus_features(clustered_chromatogram_set, features_per_samples,
-#                             sinkhorn_upper_bound=40, flow_trash_penalty=5):
+#                             gwd_upper_bound=40, matching_penalty=5):
 #     consensus_features = [[] for _ in range(len(clustered_chromatogram_set))]
 #     all_matched_left = []
 #
@@ -109,9 +162,9 @@ def calc_two_ch_sets_dists(chromatograms1: list[Chromatogram],
 #         #         print(i)
 #         chromatogram_dists = calc_two_ch_sets_dists(
 #             chrom_set, clustered_chromatogram_set,
-#             sinkhorn_upper_bound=sinkhorn_upper_bound)
+#             gwd_upper_bound=gwd_upper_bound)
 #         matchings, matched_left, matched_right = match_chromatograms(
-#             chromatogram_dists, flow_trash_penalty)
+#             chromatogram_dists, matching_penalty)
 #         for chromatogram_j, feature_ind in matchings:
 #             consensus_features[feature_ind].append(
 #                 (chrom_set_i, chromatogram_j))
@@ -134,16 +187,16 @@ def dump_consensus_features(consensus_features, filename,
         outfile.write("\n".join(rows))
 
 
-def find_pairwise_consensus_features(chromatogram_set1, chromatogram_set2,
-                                     sinkhorn_upper_bound=40,
-                                     flow_trash_penalty=5):
+def find_pairwise_consensus_features(feature_set1, feature_set2,
+                                     gwd_upper_bound=40,
+                                     matching_penalty=5):
     consensus_features = []
 
-    c_dists = calc_two_ch_sets_dists(chromatogram_set1, chromatogram_set2,
-                                     sinkhorn_upper_bound=sinkhorn_upper_bound,
-                                     mz_mid_upper_bound=2)
+    dists = gwd_distance_matrix(feature_set1, feature_set2,
+                                gwd_upper_bound=gwd_upper_bound,
+                                mz_mid_upper_bound=2)
     matchings, matched_left, matched_right = match_chromatograms(
-        c_dists, penalty=flow_trash_penalty)
+        dists, penalty=matching_penalty)
 
     for left_f_ind, right_f_ind in matchings:
         consensus_features.append([(0, left_f_ind), (1, right_f_ind)])

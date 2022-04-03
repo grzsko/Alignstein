@@ -49,11 +49,11 @@ if __name__ == "__main__":
                                             distance_threshold=30)
         consensus_features, matched_all_sets = find_consensus_features(
             clusters, feature_sets_list,
-            sinkhorn_upper_bound=20, flow_trash_penalty=5
+            gwd_upper_bound=20, matching_penalty=5
         )
     else:
         consensus_features, matched_all_sets = find_pairwise_consensus_features(
-                *feature_sets_list, sinkhorn_upper_bound=20, flow_trash_penalty=5)
+                *feature_sets_list, gwd_upper_bound=20, matching_penalty=5)
 
     # Dump
     dump_consensus_features(consensus_features, "align.out",

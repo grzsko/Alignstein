@@ -4,7 +4,22 @@ import numpy as np
 ROUNDING_COEF = 10
 
 
-def match_chromatograms(ch_dists, penalty=40):
+def match_chromatograms(dists, penalty=40):
+    """
+    Do matching between features of two chromatograms.
+
+    This function is just encoding in Netwrokx graph, the matching problem
+    formulated in paper SI.
+
+    Parameters
+    ----------
+    dists : distances between features. May containt infinity values
+    penalty : penalty for feature not matching
+
+    Returns
+    -------
+
+    """
     # 1 - from, 2 - to, 0 - s, t node, -1 is trash node
     G = nx.DiGraph()
 
@@ -12,72 +27,84 @@ def match_chromatograms(ch_dists, penalty=40):
     # where distance is paid once. So half of penalty should be interpreted as max
     # distance for which it is acceptable to make a matching.
 
-    inds = np.nonzero(ch_dists < np.inf)
-    for i, j, dist in zip(*inds, ch_dists[inds]):
+    inds = np.nonzero(dists < np.inf)
+    for i, j, dist in zip(*inds, dists[inds]):
         G.add_edge((1, i), (2, j), capacity=1,
                    weight=int(round(dist * ROUNDING_COEF)))
 
-    for i in range(ch_dists.shape[0]):
+    for i in range(dists.shape[0]):
         G.add_edge((0, "s"), (1, i), capacity=1)
         G.add_edge((1, i), (-1, "trash"), capacity=1,
                    weight=penalty * ROUNDING_COEF)
 
-    if ch_dists.shape[0] > ch_dists.shape[
+    if dists.shape[0] > dists.shape[
         1]:  # if equal, add no extra rubbish path
         G.add_edge((-1, "trash"), (0, "t"),
-                   capacity=ch_dists.shape[0] - ch_dists.shape[1])
+                   capacity=dists.shape[0] - dists.shape[1])
 
-    for i in range(ch_dists.shape[1]):
+    for i in range(dists.shape[1]):
         G.add_edge((2, i), (0, "t"), capacity=1)
         G.add_edge((-1, "trash"), (2, i), capacity=1,
                    weight=penalty * ROUNDING_COEF)
 
-    if ch_dists.shape[1] > ch_dists.shape[
+    if dists.shape[1] > dists.shape[
         0]:  # if equal, add no extra rubbish path
         G.add_edge((0, "s"), (-1, "trash"),
-                   capacity=ch_dists.shape[1] - ch_dists.shape[0])
+                   capacity=dists.shape[1] - dists.shape[0])
 
     min_cost_flow = nx.max_flow_min_cost(G, (0, "s"), (0, "t"))
 
     return extract_matching_from_flow(min_cost_flow)
 
 
-def match_chromatograms_gathered_by_clusters(ch_dists, clusters, penalty=40):
+def match_chromatograms_gathered_by_clusters(dists, clusters, penalty=40):
+    """
+    Do matching with restriction that in every cluster only feature can be matched.
+
+    This function is just encoding in Netwrokx graph, the matching problem
+    formulated in paper SI.
+
+    Parameters
+    ----------
+    dists : distances between features. May containt infinity values
+    clusters :
+    penalty : penalty for feature not matching
+
+    Returns
+    -------
+
+    """
     G = nx.DiGraph()
 
-    # WARNING! Both unmatched nodes pay for not pairing, contrary to pairing,
-    # where distance is paid once. So half of penalty should be interpreted as max
-    # distance for which it is acceptable to make a matching.
-
     # 1 - from, 2 - to, 3 - extra cluster layaer, 0 - s, t node, -1 is trash node
-    inds = np.nonzero(ch_dists < np.inf)
+    inds = np.nonzero(dists < np.inf)
     clusters_unique = np.unique(clusters)
-    for i, j, dist in zip(*inds, ch_dists[inds]):
+    for i, j, dist in zip(*inds, dists[inds]):
         G.add_edge((1, i), (2, j), capacity=1,
                    weight=int(round(dist * ROUNDING_COEF)))
 
-    for i in range(ch_dists.shape[0]):
+    for i in range(dists.shape[0]):
         G.add_edge((0, "s"), (1, i), capacity=1)
         G.add_edge((1, i), (-1, "trash"), capacity=1,
                    weight=penalty * ROUNDING_COEF)
 
-    if ch_dists.shape[0] > len(clusters_unique):
+    if dists.shape[0] > len(clusters_unique):
         # if equal, add no extra rubbish path
         G.add_edge((-1, "trash"), (0, "t"),
-                   capacity=ch_dists.shape[0] - len(clusters_unique))
+                   capacity=dists.shape[0] - len(clusters_unique))
 
     for cluster in clusters_unique:
         G.add_edge((3, cluster), (0, "t"), capacity=1)
         G.add_edge((-1, "trash"), (3, cluster), capacity=1,
                    weight=penalty * ROUNDING_COEF)
 
-    for i in range(ch_dists.shape[1]):
+    for i in range(dists.shape[1]):
         G.add_edge((2, i), (3, clusters[i]), capacity=1)
 
-    if len(clusters_unique) > ch_dists.shape[0]:
+    if len(clusters_unique) > dists.shape[0]:
         # if equal, add no extra rubbish path
         G.add_edge((0, "s"), (-1, "trash"),
-                   capacity=len(clusters_unique) - ch_dists.shape[0])
+                   capacity=len(clusters_unique) - dists.shape[0])
 
     min_cost_flow = nx.max_flow_min_cost(G, (0, "s"), (0, "t"))
 
