@@ -201,8 +201,7 @@ def openms_feature_to_feature(openms_feature, input_map):
                     mzs.append(mz)
                     rts.append(rt)
                     ints.append(i)
-    if len(rts) == 0:
-        print("zero length")
+
     ch = Chromatogram(rts, mzs, ints)
     ch.normalize(keep_old=True)
     if hasattr(openms_feature, 'ext_id'):
@@ -222,7 +221,7 @@ def openms_feature_to_feature(openms_feature, input_map):
 #             features.append(f)
 #     return features
 
-def openms_features_to_features(input_map, openms_features):
+def openms_features_to_features(input_map, openms_features, omit_empty=True):
     """
     Gather signal over all OpenMS-like features and create Alignstein features.
 
@@ -235,6 +234,9 @@ def openms_features_to_features(input_map, openms_features):
         Iterable with OpenMS-like objects representing features.
     input_map : pyopenms.InputMap
         Parsed chromatogram.
+    omit_empty : bool
+        Should features marked with empty flag be added to result list of
+        features?
 
     Returns
     -------
@@ -244,8 +246,11 @@ def openms_features_to_features(input_map, openms_features):
     chromatograms = []
     # Chromatogram class is universal, so we use it to represent chromatograms
     # subsets, i.e. features.
-    for f in openms_features:
-        chromatograms.append(openms_feature_to_feature(f, input_map))
+    for openms_feature in openms_features:
+        feature = openms_feature_to_feature(openms_feature, input_map)
+        if (not omit_empty) or (not feature.empty):
+            # i.e. omit only when both are true
+            chromatograms.append(feature)
     return chromatograms
 
 
@@ -291,7 +296,7 @@ def parse_features_from_file(filename):
     list of OpenMSMimicry
         Parsed features with API conforming pyopenms API.
     """
-    features = MyCollection()
+    detected_features = MyCollection()
     tree = ET.parse(filename)
     root = tree.getroot()
     feature_list = root.find("./featureList")
@@ -305,11 +310,11 @@ def parse_features_from_file(filename):
         if len(points) > 2:
             mimicry_feature = OpenMSFeatureMimicry(points)
             mimicry_feature.ext_id = i
-            features.append(mimicry_feature)
+            detected_features.append(mimicry_feature)
         else:
             print("Skipping small openms_feature, id:", feature.attrib["id"])
             continue
-    return features
+    return detected_features
 
 
 def parse_chromatogram_with_detected_features(filename, features_filename):
@@ -331,10 +336,10 @@ def parse_chromatogram_with_detected_features(filename, features_filename):
         Parsed features with collected signal.
     """
     input_map = parse_chromatogram_file(filename)
-    features = parse_features_from_file(features_filename)
-    print("Parsed file", filename, "\n", features.size(),
+    openms_like_features = parse_features_from_file(features_filename)
+    print("Parsed file", filename, "\n", openms_like_features.size(),
           "OpenMS features found.")
-    return openms_features_to_features(input_map, features)
+    return openms_features_to_features(input_map, openms_like_features)
 
 # def parse_chromatograms_and_features(chromatogram_filenames,
 #                                      features_filenames):
