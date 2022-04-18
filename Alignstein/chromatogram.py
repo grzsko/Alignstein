@@ -127,5 +127,8 @@ class Chromatogram:
         tuple
             Max. RT, max. M/Z, min. RT, min. MZ
         """
-        return (np.max(self.rts), np.max(self.mzs),
-                np.min(self.rts), np.min(self.mzs))
+        if not self.empty:
+            return (np.max(self.rts), np.max(self.mzs),
+                    np.min(self.rts), np.min(self.mzs))
+        else:
+            return 0, 0, 0, 0

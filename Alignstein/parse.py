@@ -152,7 +152,9 @@ def get_weight(lengths_rt, widths_mz):
     float
         Average feature length to width.
     """
-    return np.mean(lengths_rt) / np.mean(widths_mz)
+    # Omitting zero values as meaningless.
+    return (np.mean(lengths_rt[0.0 < lengths_rt]) /
+            np.mean(widths_mz[0.0 < widths_mz]))
 
 
 def features_to_weight(features):
@@ -350,7 +352,8 @@ def parse_chromatogram_with_detected_features(filename, features_filename):
 #     Returns
 #     -------
 #     list of lists of Chromatogram
-#         Parsed features with collected signal for consecutive chromatogram files.
+#         Parsed features with collected signal for consecutive chromatogram
+#         files.
 #     """
 #     feature_sets_list = []
 #     for chromatogram_fname, features_fname in zip(chromatogram_filenames,

@@ -61,6 +61,7 @@ def find_consensus_features(clusters, feature_sets_list,
                             matching_penalty=5, turns=10,
                             mz_mid_upper_bound=float("inf"), eps=0.1):
     """
+    Find consensus feature in preclustered dataset.
 
     Parameters
     ----------
@@ -75,7 +76,7 @@ def find_consensus_features(clusters, feature_sets_list,
         transported while computing GWD.
     matching_penalty : penalty for feature not matching
     turns : number of one feature set matching repeats
-     mz_mid_upper_bound :
+    mz_mid_upper_bound : float
         Additional parameter if GDW should computed only for features with
         centroid M/Z difference lower than this parameter. Usually not used.
     eps : float
@@ -135,7 +136,7 @@ def cluster_mids_subsets(mids, distance_threshold=10):
     RT_COL = 0
     # For clustering we want to smash RT to obtain clusters 'flat' over RT axis,
     # the simplest solution is to take log form RT
-    mids_log[:, RT_COL] = np.log(mids_log[:, RT_COL])
+    mids_log[:, RT_COL] = np.log(1 + mids_log[:, RT_COL])
     return AgglomerativeClustering(n_clusters=None, affinity="l1",
                                    linkage='average',
                                    distance_threshold=distance_threshold,
