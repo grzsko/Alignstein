@@ -89,7 +89,7 @@ def mid_mz_dist(ch1, ch2):
 
 def gwd_distance_matrix(chromatograms1: list[Chromatogram],
                         chromatograms2: list[Chromatogram],
-                        distance_upper_bound=10,
+                        centroid_upper_bound=10,
                         gwd_upper_bound=40,
                         mz_mid_upper_bound=float("inf"), eps=0.1):
     """
@@ -101,7 +101,7 @@ def gwd_distance_matrix(chromatograms1: list[Chromatogram],
         First list of features.
     chromatograms2 : list of Chromatogram
         First list of features.
-    distance_upper_bound : float
+    centroid_upper_bound : float
         Maximum cetroid distance between which GWD. For efficiency reasons
         should be reasonably small. If centroid distance is larger than
         distance_upper_bound, infinity is computed.
@@ -133,7 +133,7 @@ def gwd_distance_matrix(chromatograms1: list[Chromatogram],
     for i, chi in enumerate(chromatograms1):
         for j, chj in enumerate(chromatograms2):
             if not chi.empty and not chj.empty:
-                if (mid_dist(chi, chj) <= distance_upper_bound and
+                if (mid_dist(chi, chj) <= centroid_upper_bound and
                         mid_mz_dist(chi, chj) < mz_mid_upper_bound):
                     dists[i, j] = feature_dist(
                         chi, chj, penalty=gwd_upper_bound, eps=eps)
@@ -188,13 +188,48 @@ def dump_consensus_features(consensus_features, filename,
 
 
 def find_pairwise_consensus_features(feature_set1, feature_set2,
-                                     gwd_upper_bound=40,
-                                     matching_penalty=5):
+                                     centroid_upper_bound=10,
+                                     gwd_upper_bound=10,
+                                     matching_penalty=5,
+                                     mz_mid_upper_bound=2,
+                                     eps=0.1):
+    """
+    Find consensus features between two feature sets.
+
+    Parameters
+    ----------
+    feature_set1 : iterable of Chromatogram
+        List with one chromatogram features
+    feature_set2 : iterable of Chromatogram
+        List with other chromatogram features
+    centroid_upper_bound : float
+        Maximum cetroid distance between which GWD will computed. For efficiency
+        reasons should be reasonably small.
+    gwd_upper_bound : float
+        Penalty for not transporting a part of signal, aka the lambda parameter.
+        Can be interpreted as maximal distance over which signal is
+        transported while computing GWD.
+    matching_penalty : penalty for feature not matching
+    mz_mid_upper_bound : float
+        Additional parameter if GWD should computed only for features with
+        centroid M/Z difference lower than this parameter.
+    eps : float
+        GWD entropic penalization coefficient, aka the epsilon parameter.
+        Default value is chosen reasonably. Change it only if you understand how
+        it works.
+
+    Returns
+    -------
+    Consensus features
+    """
     consensus_features = []
 
     dists = gwd_distance_matrix(feature_set1, feature_set2,
+                                centroid_upper_bound=centroid_upper_bound,
                                 gwd_upper_bound=gwd_upper_bound,
-                                mz_mid_upper_bound=2)
+                                mz_mid_upper_bound=mz_mid_upper_bound,
+                                eps=eps)
+
     matchings, matched_left, matched_right = match_chromatograms(
         dists, penalty=matching_penalty)
 
