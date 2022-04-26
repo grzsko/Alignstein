@@ -57,7 +57,7 @@ def flatten_chromatograms(chromatograms_sets_list, clusters,
 
 
 def find_consensus_features(clusters, feature_sets_list,
-                            distance_upper_bound=10, gwd_upper_bound=10,
+                            centroid_upper_bound=10, gwd_upper_bound=10,
                             matching_penalty=5, turns=10,
                             mz_mid_upper_bound=float("inf"), eps=0.1):
     """
@@ -67,7 +67,7 @@ def find_consensus_features(clusters, feature_sets_list,
     ----------
     clusters
     feature_sets_list
-    distance_upper_bound : float
+    centroid_upper_bound : float
         Maximum cetroid distance between which GWD will computed. For efficiency
         reasons should be reasonably small.
         gwd_upper_bound : float
@@ -96,7 +96,7 @@ def find_consensus_features(clusters, feature_sets_list,
             feature_sets_list, clusters,
             exclude_chromatogram_sets=[sample_i])
         dists = gwd_distance_matrix(one_sample_features, rest_of_features,
-                                    distance_upper_bound=distance_upper_bound,
+                                    centroid_upper_bound=centroid_upper_bound,
                                     gwd_upper_bound=gwd_upper_bound,
                                     mz_mid_upper_bound=mz_mid_upper_bound,
                                     eps=eps)
