@@ -64,7 +64,7 @@ class Chromatogram:
     @property
     def mid(self):
         """
-        Calculate chromatogram (subset) ceintroid.
+        Calculate chromatogram (subset) centroid.
 
         Returns
         -------
