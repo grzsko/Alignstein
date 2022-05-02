@@ -37,8 +37,8 @@ def match_chromatograms(dists, penalty=40):
         G.add_edge((1, i), (-1, "trash"), capacity=1,
                    weight=penalty * ROUNDING_COEF)
 
-    if dists.shape[0] > dists.shape[
-        1]:  # if equal, add no extra rubbish path
+    if dists.shape[0] > dists.shape[1]:
+        # if equal, add no extra rubbish path
         G.add_edge((-1, "trash"), (0, "t"),
                    capacity=dists.shape[0] - dists.shape[1])
 
@@ -47,8 +47,8 @@ def match_chromatograms(dists, penalty=40):
         G.add_edge((-1, "trash"), (2, i), capacity=1,
                    weight=penalty * ROUNDING_COEF)
 
-    if dists.shape[1] > dists.shape[
-        0]:  # if equal, add no extra rubbish path
+    if dists.shape[1] > dists.shape[0]:
+        # if equal, add no extra rubbish path
         G.add_edge((0, "s"), (-1, "trash"),
                    capacity=dists.shape[1] - dists.shape[0])
 
