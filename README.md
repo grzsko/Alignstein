@@ -13,8 +13,7 @@ Usage
 -----
 Alignstein package can be used as a Python3 library and its usage ~~is~~ will be described in the Jupyter notebook with tutorial under `tutorials` directory.
 
-Moreover, it is possible to use Alignstein from bash, but for now in limited version - still, not all parameters can be provided in command-line mode. The possibility to run fully-functional command-line mode will be available with the release of stable version 1.0.
-
+Moreover, it is possible to use Alignstein from bash.
 To perform alignment of chromatograms written in files `file1.mzml`, `file2.mzml` (accepted formats: mzData, mzXML, and mzML) run:
 ```
 $ align file1.mzml file2.mzml ...
@@ -24,9 +23,3 @@ More help under
 $ align --help
 ```
 As a result the detected features are dumped as well as consenus features consensus.csv file.
-
-Known list of TODOs:
---------------------
-1. Parameters handling reimplementation to ease Alignstein's usage to users.
-2. Tutorial.
-3. Fully-featured command-line usage.
