@@ -1,7 +1,7 @@
 """Parse mzml files and perform alignment
 
 Usage: align.py -h
-       align.py [-f FEATURE_FILE...] MZML_FILE...
+       align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-f FEATURE_FILE...] MZML_FILE...
 
 Arguments:
     MZML_FILE        names of files with chromatograms to be aligned
@@ -11,6 +11,15 @@ Options:
                      order of filenames should conform order of input data
                      files. If not provided features are detected and dumped
                      into featureXML files.
+    -c SCALING_CONST additional contant by which RT should be scaled
+    -t MIDS_THRSH    Distance threshold between centroid in one cluster. Not
+                     applicable when aligning two chromatograms.
+    -m MIDS_UP_BOUND Maximum cetroid distance between which GWD will computed.
+                     For efficiency reasons should be reasonably small.
+    -w GWD_UP_BOUND  Cost of not transporting a part of signal, aka the
+                     lambda parameter. Can be interpreted as maximal distance
+                     over which signal is transported while computing GWD.
+    -p PENALTY       penalty for feature not matching
 """
 
 from docopt import docopt
@@ -19,7 +28,8 @@ from .align import *
 from .multialign import *
 from .parse import *
 
-if __name__ == "__main__":
+
+def main():
     arguments = docopt(__doc__)
 
     # Parsing
@@ -33,7 +43,8 @@ if __name__ == "__main__":
             for ch_fname, fs_fname in zip(arguments["MZML_FILE"],
                                           arguments["-f"])]
     # RT scaling
-    C = 5  # We scale additionaly by 5, to make RT more smashed, it works fine.
+    C = float(arguments["-c"])  # We scale additionaly by C, to make
+    # RT more smashed, C between 5 and 10 it works fine.
     weights = [features_to_weight(f_set) for f_set in feature_sets_list]
     average_weight = np.mean(weights)
     for feature_set in feature_sets_list:
@@ -42,19 +53,30 @@ if __name__ == "__main__":
 
     # Aligning
     if len(arguments["MZML_FILE"]) > 2:
-        mids, ch_indices = gather_mids(feature_sets_list)
+        mids = gather_mids(feature_sets_list)
 
-        big_clusters = precluster_mids(mids, distance_threshold=20)
-        clusters = big_clusters_to_clusters(mids, big_clusters,
-                                            distance_threshold=30)
+        big_clusters = precluster_mids(mids)
+        clusters = big_clusters_to_clusters(
+            mids, big_clusters, distance_threshold=float(arguments["-t"]))
         consensus_features, matched_all_sets = find_consensus_features(
             clusters, feature_sets_list,
-            gwd_upper_bound=20, matching_penalty=5
+            centroid_upper_bound=float(arguments["-m"]),
+            gwd_upper_bound=float(arguments["-w"]),
+            matching_penalty=float(arguments["-p"]),
+            turns=10  # turn=10 is enough
         )
     else:
         consensus_features, matched_all_sets = find_pairwise_consensus_features(
-                *feature_sets_list, gwd_upper_bound=20, matching_penalty=5)
+            *feature_sets_list,
+            centroid_upper_bound=float(arguments["-m"]),
+            gwd_upper_bound=float(arguments["-w"]),
+            matching_penalty=float(arguments["-p"])
+        )
 
     # Dump
     dump_consensus_features(consensus_features, "align.out",
                             feature_sets_list)
+
+
+if __name__ == "__main__":
+    main()

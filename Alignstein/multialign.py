@@ -70,9 +70,9 @@ def find_consensus_features(clusters, feature_sets_list,
     centroid_upper_bound : float
         Maximum cetroid distance between which GWD will computed. For efficiency
         reasons should be reasonably small.
-        gwd_upper_bound : float
+    gwd_upper_bound : float
         Penalty for not transporting a part of signal, aka the lambda parameter.
-        Can cen interpreted as maximal distance over which signal is
+        Can be interpreted as maximal distance over which signal is
         transported while computing GWD.
     matching_penalty : penalty for feature not matching
     turns : number of one feature set matching repeats
