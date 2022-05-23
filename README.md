@@ -11,7 +11,7 @@ Installation
 
 Usage
 -----
-Alignstein package can be used as a Python3 library and its usage ~~is~~ will be described in the Jupyter notebook with tutorial under `tutorials` directory.
+Alignstein package can be used as a Python3 library and its usage is described in the Jupyter notebook with tutorial under `tutorials` directory.
 
 Moreover, it is possible to use Alignstein from bash.
 To perform alignment of chromatograms written in files `file1.mzml`, `file2.mzml` (accepted formats: mzData, mzXML, and mzML) run:
