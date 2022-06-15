@@ -1,8 +1,8 @@
 """Parse mzml files and perform alignment
 
 Usage: align.py -h
-       align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-m MIDS_UP_BOUND] [-w GWD_UP_BOUND]
-                [-p PENALTY] [-f FEATURE_FILE...] MZML_FILE...
+       align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-m MIDS_UP_BOUND]
+                [-w GWD_UP_BOUND] [-p PENALTY] [-f FEATURE_FILE...] MZML_FILE...
 
 Arguments:
     MZML_FILE        names of files with chromatograms to be aligned
@@ -13,7 +13,8 @@ Options:
                      files. For clear option definition every feature filename
                      should be prefixed with -f. If not provided features are
                      detected and dumped into featureXML files.
-    -c SCALING_CONST additional contant by which RT should be scaled [default: 1]
+    -c SCALING_CONST Additional constant by which RT should be scaled.
+                     [default: 1]
     -t MIDS_THRSH    Distance threshold between centroid in one cluster. Not
                      applicable when aligning two chromatograms. [default: 1.5]
     -m MIDS_UP_BOUND Maximum cetroid distance between which GWD will computed.
@@ -23,7 +24,7 @@ Options:
                      lambda parameter. Can be interpreted as maximal distance
                      over which signal is transported while computing GWD.
                      [default: 10]
-    -p PENALTY       penalty for feature not matching [default: 10]
+    -p PENALTY       penalty for feature not matching. [default: 10]
 """
 
 from docopt import docopt

@@ -115,10 +115,10 @@ def dump_consensus_features(consensus_features, filename,
             for set_i, chromatogram_j in sorted(consensus_feature):
                 # Leave empty space for not found consensus features
                 while set_i > next_set_id:
-                    row.extend("")
+                    row.append("")
                     next_set_id += 1
                 f_id = chromatograms_sets_list[set_i][chromatogram_j].feature_id
-                row.extend(f_id)
+                row.append(f_id)
             rows.append(" ".join(map(str, row)))
         outfile.write("\n".join(rows))
 
