@@ -78,7 +78,7 @@ def main():
         )
 
     # Dump
-    dump_consensus_features(consensus_features, "align.out",
+    dump_consensus_features(consensus_features, "consensus.csv",
                             feature_sets_list)
 
 
