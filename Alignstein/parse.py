@@ -251,6 +251,9 @@ def openms_features_to_features(input_map, openms_features, omit_empty=True):
         if (not omit_empty) or (not feature.empty):
             # i.e. omit only when both are true
             chromatograms.append(feature)
+    for i, feature in enumerate(chromatograms):
+        feature.feature_id = i  # We identify features as analyzed, other
+        # numeration (e.g. OpenMS) is stored in ext_id
     return chromatograms
 
 
