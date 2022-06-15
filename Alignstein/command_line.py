@@ -1,7 +1,8 @@
 """Parse mzml files and perform alignment
 
 Usage: align.py -h
-       align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-f FEATURE_FILE...] MZML_FILE...
+       align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-m MIDS_UP_BOUND] [-w GWD_UP_BOUND]
+                [-p PENALTY] [-f FEATURE_FILE...] MZML_FILE...
 
 Arguments:
     MZML_FILE        names of files with chromatograms to be aligned
@@ -9,9 +10,10 @@ Arguments:
 Options:
     -f FEATURE_FILE  names of files with detected features in chromatograms,
                      order of filenames should conform order of input data
-                     files. If not provided features are detected and dumped
-                     into featureXML files.
-    -c SCALING_CONST additional contant by which RT should be scaled
+                     files. For clear option definition every feature filename
+                     should be prefixed with -f. If not provided features are
+                     detected and dumped into featureXML files.
+    -c SCALING_CONST additional contant by which RT should be scaled [default: 1]
     -t MIDS_THRSH    Distance threshold between centroid in one cluster. Not
                      applicable when aligning two chromatograms. [default: 1.5]
     -m MIDS_UP_BOUND Maximum cetroid distance between which GWD will computed.
@@ -48,7 +50,7 @@ def main():
                                           feature_filenames)]
     # RT scaling
     C = float(arguments["-c"])  # We scale additionaly by C, to make
-    # RT more smashed, C between 5 and 10 it works fine.
+    # RT more squeezed, for C between 5 and 10 it works fine.
     weights = [features_to_weight(f_set) for f_set in feature_sets_list]
     average_weight = np.mean(weights)
     for feature_set in feature_sets_list:
