@@ -177,7 +177,7 @@ def gwd_distance_matrix(chromatograms1: list[Chromatogram],
 def dump_consensus_features(consensus_features, filename,
                             chromatograms_sets_list):
     rows = []
-    with open(filename, "weight") as outfile:
+    with open(filename, "w") as outfile:
         for consensus_feature in consensus_features:
             row = []
             for set_i, chromatogram_j in consensus_feature:
