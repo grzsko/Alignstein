@@ -12,7 +12,7 @@ setup(
                       "scikit-learn"],
     entry_points={
         'console_scripts': ['align=Alignstein.command_line:main'],
-    }
+    },
     extras_require={
         "notebook": ["jupyter"]
     }

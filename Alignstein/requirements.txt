@@ -1,4 +1,0 @@
-docopt
-pyopenms
-numpy
-sklearn
