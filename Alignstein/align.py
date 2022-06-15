@@ -1,13 +1,3 @@
-"""Parse mzml files and perform alignment
-
-Usage: align.py -h
-       align.py MZML_FILE MZML_FILE...
-
-Arguments:
-    MZML_FILE       names of files with chromatograms to be aligned
-
-"""
-
 import numpy as np
 from MassSinkhornmetry import distance_dense
 from scipy.spatial.distance import cdist
@@ -15,39 +5,6 @@ from tqdm import tqdm
 
 from .chromatogram import Chromatogram
 from .mfmc import match_chromatograms
-
-
-# def gather_ch_mzs_rts(features):
-#     rts = []
-#     mzs = []
-#     features_nb = []
-#     for f_i, f in enumerate(features):
-#         for ch in f.getConvexHulls():
-#             for rt, mz in ch.getHullPoints():
-#                 rts.append(rt)
-#                 mzs.append(mz)
-#                 features_nb.append(f_i)
-#     #     rts.append(f.getRT())
-#     #     mzs.append(f.getMZ())
-#     return rts, mzs, features_nb
-
-
-# def gather_ch_stats_over_exps(dirname):
-#     fnames = []
-#     means = []
-#     variances = []
-#     for i, filename in enumerate(os.listdir(dirname)):
-#         if filename.endswith(".mzXML") and i % 5 == 0:
-#             print("Now working on:", filename)
-#             input_map = parse_ms1_xml(os.path.join(dirname, filename))
-#             gc.collect()
-#             openms_featues = find_features(input_map)
-#             lengths, widths = gather_widths_lengths(openms_featues)
-#             means.append((np.mean(widths), np.mean(lengths),
-#                          np.mean(lengths) / np.mean(widths)))
-#             variances.append((np.std(widths), np.std(lengths),
-#                              np.std(lengths) / np.std(widths)))
-#     return means, variances
 
 
 def feature_dist(f1, f2, penalty=40, eps=0.1):
@@ -148,39 +105,18 @@ def gwd_distance_matrix(chromatograms1: list[Chromatogram],
           np.all(np.any(dists < np.inf, axis=1)))
     return dists
 
-
-# def align_chromatogram_sets(ch_dists, matching_penalty=40):
-#     return match_chromatograms(ch_dists, matching_penalty)
-
-
-# def find_consensus_features(clustered_chromatogram_set, features_per_samples,
-#                             gwd_upper_bound=40, matching_penalty=5):
-#     consensus_features = [[] for _ in range(len(clustered_chromatogram_set))]
-#     all_matched_left = []
-#
-#     for chrom_set_i, chrom_set in enumerate(features_per_samples):
-#         #         print(i)
-#         chromatogram_dists = calc_two_ch_sets_dists(
-#             chrom_set, clustered_chromatogram_set,
-#             gwd_upper_bound=gwd_upper_bound)
-#         matchings, matched_left, matched_right = match_chromatograms(
-#             chromatogram_dists, matching_penalty)
-#         for chromatogram_j, feature_ind in matchings:
-#             consensus_features[feature_ind].append(
-#                 (chrom_set_i, chromatogram_j))
-#
-#         all_matched_left.append(matched_left)
-#
-#     return consensus_features, all_matched_left
-
-
 def dump_consensus_features(consensus_features, filename,
                             chromatograms_sets_list):
     rows = []
     with open(filename, "w") as outfile:
         for consensus_feature in consensus_features:
             row = []
-            for set_i, chromatogram_j in consensus_feature:
+            next_set_id = 0
+            for set_i, chromatogram_j in sorted(consensus_feature):
+                # Leave empty space for not found consensus features
+                while set_i > next_set_id:
+                    row.extend("")
+                    next_set_id += 1
                 f_id = chromatograms_sets_list[set_i][chromatogram_j].feature_id
                 row.extend(f_id)
             rows.append(" ".join(map(str, row)))
