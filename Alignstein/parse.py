@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import pyopenms
 
-from .OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
+# from .OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
 from .chromatogram import Chromatogram
 
 
@@ -172,7 +172,7 @@ def openms_feature_to_feature(openms_feature, input_map):
         For every OpenMS feature do:
         1. choose spectra by RT
         2. iterate over mz and check if is enclosed
-    It is done noneffectively, but how to do it better?
+    It is done non-effectively, but how to do it better?
 
     Parameters
     ----------
@@ -204,22 +204,12 @@ def openms_feature_to_feature(openms_feature, input_map):
 
     ch = Chromatogram(rts, mzs, ints)
     ch.normalize(keep_old=True)
-    if hasattr(openms_feature, 'ext_id'):
+    if hasattr(openms_feature, 'getUniqueId'):
         # Sometimes it is useful to have some information from other software
-        ch.ext_id = openms_feature.ext_id
+        #
+        ch.ext_id = openms_feature.getUniqueId()
     return ch
 
-
-# def feature_from_file_features_to_chromatograms(input_map, openms_features):
-#     features = []
-#     for oms_f in openms_features:
-#         f = openms_feature_to_feature(oms_f, input_map)
-#         if not f.empty:
-#             f.feature_id = [oms_f.intensity, oms_f.rt, oms_f.mz]
-#             # TODO change to ext_id
-#             f.cut_smallest_peaks(0.001)
-#             features.append(f)
-#     return features
 
 def openms_features_to_features(input_map, openms_features, omit_empty=True):
     """
@@ -253,7 +243,7 @@ def openms_features_to_features(input_map, openms_features, omit_empty=True):
             chromatograms.append(feature)
     for i, feature in enumerate(chromatograms):
         feature.feature_id = i  # We identify features as analyzed, other
-        # numeration (e.g. OpenMS) is stored in ext_id
+        # numeration (e.g. from OpenMS or file) is stored in ext_id
     return chromatograms
 
 
@@ -283,41 +273,26 @@ def detect_features_from_file(filename):
     return features
 
 
-def parse_features_from_file(filename):
+def parse_features_from_file(feature_filename):
     """
     Parse features from featureXML file.
 
     Parameters
     ----------
-    filename : str
+    feature_filename : str
         Filename of features (.featureXML) to be parsed. Must have same order
         as chromatograms_filenames. Every feature of file should contain field
         convexhull which describes the spatial properties of features.
 
     Returns
     -------
-    list of OpenMSMimicry
+    pyopenms.FeatureMap
         Parsed features with API conforming pyopenms API.
     """
-    detected_features = MyCollection()
-    tree = ET.parse(filename)
-    root = tree.getroot()
-    feature_list = root.find("./featureList")
-    for i, feature in enumerate(feature_list.findall("./feature")):
-        convex_hull = feature.find("./convexhull")
-        points = []
-        for hullpoint in convex_hull.findall("./hullpoint"):
-            positions = {int(position.attrib["dim"]): float(position.text)
-                         for position in hullpoint.findall("./hposition")}
-            points.append((positions[0], positions[1]))
-        if len(points) > 2:
-            mimicry_feature = OpenMSFeatureMimicry(points)
-            mimicry_feature.ext_id = i
-            detected_features.append(mimicry_feature)
-        else:
-            print("Skipping small openms_feature, id:", feature.attrib["id"])
-            continue
-    return detected_features
+    features = pyopenms.FeatureMap()
+    feature_xml_file = pyopenms.FeatureXMLFile()
+    feature_xml_file.load(feature_filename, features)
+    return features
 
 
 def parse_chromatogram_with_detected_features(filename, features_filename):
