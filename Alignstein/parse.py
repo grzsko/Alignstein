@@ -94,7 +94,7 @@ def parse_chromatogram_file(filename):
         return parse_ms1_mzml(filename)
     elif file_extension == ".mzxml":
         return parse_ms1_mzxml(filename)
-    elif file_extension == ".mzxml":
+    elif file_extension == ".mzdata":
         return parse_ms1_mzdata(filename)
     else:
         raise ValueError("Filetype {} not supported for file {}".format(
