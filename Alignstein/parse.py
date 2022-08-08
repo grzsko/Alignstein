@@ -157,7 +157,7 @@ def get_weight(lengths_rt, widths_mz):
             np.mean(widths_mz[0.0 < widths_mz]))
 
 
-def features_to_weight(features):
+def features_to_weight(features: list[Chromatogram]):
     return get_weight(*gather_widths_lengths(features))
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 
-from .align import gwd_distance_matrix  # , align_chromatogram_sets
+from .align import gwd_distance_matrix, gwd_distance_matrix_parallel
 from .mfmc import match_chromatograms_gathered_by_clusters
 
 
@@ -95,11 +95,12 @@ def find_consensus_features(clusters, feature_sets_list,
         rest_of_features, clusters_filtered = flatten_chromatograms(
             feature_sets_list, clusters,
             exclude_chromatogram_sets=[sample_i])
-        dists = gwd_distance_matrix(one_sample_features, rest_of_features,
-                                    centroid_upper_bound=centroid_upper_bound,
-                                    gwd_upper_bound=gwd_upper_bound,
-                                    mz_mid_upper_bound=mz_mid_upper_bound,
-                                    eps=eps)
+        dists = gwd_distance_matrix_parallel(
+            one_sample_features, rest_of_features,
+            centroid_upper_bound=centroid_upper_bound,
+            gwd_upper_bound=gwd_upper_bound,
+            mz_mid_upper_bound=mz_mid_upper_bound,
+            eps=eps)
 
         for turn in range(turns):
             matchings, matched_left, matched_right = \

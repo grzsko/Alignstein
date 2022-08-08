@@ -1,7 +1,10 @@
+from multiprocessing import Pool
+
 import numpy as np
-from MassSinkhornmetry import distance_dense
 from scipy.spatial.distance import cdist
 from tqdm import tqdm
+
+from MassSinkhornmetry import distance_dense
 
 from .chromatogram import Chromatogram
 from .mfmc import match_chromatograms
@@ -105,6 +108,88 @@ def gwd_distance_matrix(chromatograms1: list[Chromatogram],
           np.all(np.any(dists < np.inf, axis=1)))
     return dists
 
+
+def pool_init(chromatograms1, params):
+    global chromatograms
+    chromatograms = chromatograms1
+    global parameters
+    parameters = params
+
+
+def async_col_distances(chromatogram):
+    column = np.full(len(chromatograms), np.inf)
+    if not chromatogram.empty:
+        for i, chi in enumerate(chromatograms):
+            if not chi.empty:
+                if (mid_dist(chi, chromatogram) <= parameters[
+                    "centroid_upper_bound"] and
+                        mid_mz_dist(chi, chromatogram) < parameters[
+                            "mz_mid_upper_bound"]):
+                    column[i] = feature_dist(
+                        chi, chromatogram, penalty=parameters["gwd_upper_bound"],
+                        eps=parameters["eps"])
+    return column
+
+
+def gwd_distance_matrix_parallel(
+        chromatograms1: list[Chromatogram], chromatograms2: list[Chromatogram],
+        centroid_upper_bound=10, gwd_upper_bound=40,
+        mz_mid_upper_bound=float("inf"), eps=0.1):
+    """
+    Compute GWD distance matrix between two feature sets, paralelized version.
+
+    Parameters
+    ----------
+    chromatograms1 : list of Chromatogram
+        First list of features.
+    chromatograms2 : list of Chromatogram
+        First list of features.
+    centroid_upper_bound : float
+        Maximum centroid distance between which GWD. For efficiency reasons
+        should be reasonably small. If centroid distance is larger than
+        distance_upper_bound, infinity is computed.
+    mz_mid_upper_bound :
+        Additional parameter if GDW should computed only for features with
+        centroid M/Z difference lower than this parameter. Usually not used.
+    gwd_upper_bound : float
+        Penalty for not transporting a part of signal, aka the lambda parameter.
+        Can cen interpreted as maximal distance over which signal is
+        transported.
+    eps : float
+        GWD entropic penalization coefficient, aka the epsilon parameter.
+        Default value is chosen reasonably. Change it only if you understand how
+        it works.
+    Returns
+    -------
+    numpy.array
+        GDW distance (or infinity if centroids are too distant) matrix between
+        two feature sets.
+    """
+    # total = len(chromatograms1) * len(chromatograms2)
+    # dists = np.full((len(chromatograms1), len(chromatograms2)), np.inf)
+
+    with Pool(
+            initializer=pool_init,
+            initargs=(chromatograms1, {
+                "centroid_upper_bound": centroid_upper_bound,
+                "gwd_upper_bound": gwd_upper_bound,
+                "mz_mid_upper_bound": mz_mid_upper_bound,
+                "eps": eps})) as pool:
+        # TODO Make dists sparse
+        columns = [pool.apply_async(async_col_distances, [ch]) \
+                   for ch in chromatograms2]
+        # There is probably more chromatograms2 than chromatograms1 so we have
+        # more flexibility in spawning data over processes and less data is
+        # copied to all processes
+        dists = np.column_stack([column.get() for column in columns])
+    print("Calculated dists, number of nans:", np.sum(np.isnan(dists)))
+    print("All columns have any row non zero:",
+          np.all(np.any(dists < np.inf, axis=0)))
+    print("All rows have any column non zero:",
+          np.all(np.any(dists < np.inf, axis=1)))
+    return dists
+
+
 def dump_consensus_features(consensus_features, filename,
                             chromatograms_sets_list):
     rows = []
@@ -160,11 +245,12 @@ def find_pairwise_consensus_features(feature_set1, feature_set2,
     """
     consensus_features = []
 
-    dists = gwd_distance_matrix(feature_set1, feature_set2,
-                                centroid_upper_bound=centroid_upper_bound,
-                                gwd_upper_bound=gwd_upper_bound,
-                                mz_mid_upper_bound=mz_mid_upper_bound,
-                                eps=eps)
+    dists = gwd_distance_matrix_parallel(
+        feature_set1, feature_set2,
+        centroid_upper_bound=centroid_upper_bound,
+        gwd_upper_bound=gwd_upper_bound,
+        mz_mid_upper_bound=mz_mid_upper_bound,
+        eps=eps)
 
     matchings, matched_left, matched_right = match_chromatograms(
         dists, penalty=matching_penalty)
