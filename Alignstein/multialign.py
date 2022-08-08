@@ -168,3 +168,11 @@ def big_clusters_to_clusters(mids, big_clusters, distance_threshold=5):
             mids_subset, distance_threshold=distance_threshold)
         clusters[inds] = clusters_subsets + np.max(clusters) + 1
     return clusters
+
+
+def cluster_mids(feature_sets_list, distance_threshold=5):
+    mids = gather_mids(feature_sets_list)
+    big_clusters = precluster_mids(mids)
+    clusters = big_clusters_to_clusters(mids, big_clusters,
+                                        distance_threshold=distance_threshold)
+    return mids, big_clusters, clusters
