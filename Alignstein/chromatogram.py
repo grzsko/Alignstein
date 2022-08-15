@@ -107,6 +107,7 @@ class Chromatogram:
         self.mzs = self.mzs[where_to_cut]
         self.rts = self.rts[where_to_cut]
         self.normalize()
+        self.empty = len(rts) == 0
 
     def any_in_hull(self, points):
         """
