@@ -17,7 +17,7 @@ Options:
                      [default: 1]
     -t MIDS_THRSH    Distance threshold between centroid in one cluster. Not
                      applicable when aligning two chromatograms. [default: 1.5]
-    -m MIDS_UP_BOUND Maximum cetroid distance between which GWD will computed.
+    -m MIDS_UP_BOUND Maximum cetroid distance between which GWD will be computed.
                      For efficiency reasons should be reasonably small.
                      [default: 10]
     -w GWD_UP_BOUND  Cost of not transporting a part of signal, aka the
@@ -26,6 +26,7 @@ Options:
                      [default: 10]
     -p PENALTY       penalty for feature not matching. [default: 10]
 """
+# TODO add parameter for verbosity level
 
 from docopt import docopt
 
@@ -60,11 +61,8 @@ def main():
 
     # Aligning
     if len(arguments["MZML_FILE"]) > 2:
-        mids = gather_mids(feature_sets_list)
-
-        big_clusters = precluster_mids(mids)
-        clusters = big_clusters_to_clusters(
-            mids, big_clusters, distance_threshold=float(arguments["-t"]))
+        mids, big_clusters, clusters = cluster_mids(
+            feature_sets_list, distance_threshold=float(arguments["-t"]))
         consensus_features, matched_all_sets = find_consensus_features(
             clusters, feature_sets_list,
             centroid_upper_bound=float(arguments["-m"]),
@@ -83,6 +81,7 @@ def main():
     # Dump
     dump_consensus_features(consensus_features, "consensus.csv",
                             feature_sets_list)
+    # TODO change it into featureXML file
 
 
 if __name__ == "__main__":
