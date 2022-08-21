@@ -265,9 +265,11 @@ def big_clusters_to_clusters(mids, big_clusters, distance_threshold=5,
     return clusters
 
 
-def cluster_mids(feature_sets_list, distance_threshold=5):
+def cluster_mids(feature_sets_list, distance_threshold=5, clusters_flat=False):
     mids = gather_mids(feature_sets_list)
     big_clusters = precluster_mids(mids)
     clusters = big_clusters_to_clusters(mids, big_clusters,
-                                        distance_threshold=distance_threshold)
+                                        distance_threshold=distance_threshold,
+                                        clusters_flat=clusters_flat)
     return mids, big_clusters, clusters
+    # TODO Do it better with this clusters_flat
