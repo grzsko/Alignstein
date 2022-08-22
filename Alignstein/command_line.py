@@ -2,12 +2,11 @@
 
 Usage: align.py -h
        align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-m MIDS_UP_BOUND]
-                [-w GWD_UP_BOUND] [-p PENALTY] [-f FEATURE_FILE...] MZML_FILE...
-
-Arguments:
-    MZML_FILE        names of files with chromatograms to be aligned
+                [-w GWD_UP_BOUND] [-p PENALTY] [-f FEATURE_FILE...] -r MZML_FILE...
 
 Options:
+    -r MZML_FILE     names of files with chromatograms to be aligned
+
     -f FEATURE_FILE  names of files with detected features in chromatograms,
                      order of filenames should conform order of input data
                      files. For clear option definition every feature filename
@@ -37,7 +36,7 @@ from .parse import *
 
 def main():
     arguments = docopt(__doc__)
-    chromatogram_filenames = arguments["MZML_FILE"]
+    chromatogram_filenames = arguments["-r"]
     feature_filenames = arguments["-f"]
 
     # Parsing
@@ -60,18 +59,21 @@ def main():
             feature.scale_rt(average_weight * C)
 
     # Aligning
-    if len(arguments["MZML_FILE"]) > 2:
+    if len(arguments["-r"]) > 2:
         mids, big_clusters, clusters = cluster_mids(
-            feature_sets_list, distance_threshold=float(arguments["-t"]))
-        consensus_features, matched_all_sets = find_consensus_features(
+            feature_sets_list, distance_threshold=float(arguments["-t"]),
+            clusters_flat=True)
+        # TODO Pararel function chosen by parameter
+        consensus_features = find_consensus_features(
             clusters, feature_sets_list,
             centroid_upper_bound=float(arguments["-m"]),
             gwd_upper_bound=float(arguments["-w"]),
             matching_penalty=float(arguments["-p"]),
-            turns=10  # turn=10 is enough
+            turns=10#,  # turn=10 is enough
+            #big_clusters=big_clusters
         )
     else:
-        consensus_features, matched_all_sets = find_pairwise_consensus_features(
+        consensus_features, _ = find_pairwise_consensus_features(
             *feature_sets_list,
             centroid_upper_bound=float(arguments["-m"]),
             gwd_upper_bound=float(arguments["-w"]),
