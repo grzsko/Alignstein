@@ -3,29 +3,30 @@
 Usage: align.py -h
        align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-m MIDS_UP_BOUND]
                 [-w GWD_UP_BOUND] [-p PENALTY] [-o OUT_FILENAME]
-                [-f FEATURE_FILE...] [--] MZML_FILE...
+                [-f FEATURE_FILE]... MZML_FILE...
 
 Arguments:
-    MZML_FILE        names of files with chromatograms to be aligned
+    MZML_FILE      names of files with chromatograms to be aligned
 
 Options:
-    -f FEATURE_FILE  names of files with detected features in chromatograms,
-                     order of filenames should conform order of input data
-                     files. Separate feature list from chromatogram list using
-                     -- sign.
-    -o OUT_FILENAME  Output consensus filename [default: consensus.out]
-    -c SCALING_CONST Additional constant by which RT should be scaled.
-                     [default: 1]
-    -t MIDS_THRSH    Distance threshold between centroid in one cluster. Not
-                     applicable when aligning two chromatograms. [default: 1.5]
-    -m MIDS_UP_BOUND Maximum cetroid distance between which GWD will be computed.
-                     For efficiency reasons should be reasonably small.
-                     [default: 10]
-    -w GWD_UP_BOUND  Cost of not transporting a part of signal, aka the
-                     lambda parameter. Can be interpreted as maximal distance
-                     over which signal is transported while computing GWD.
-                     [default: 10]
-    -p PENALTY       penalty for feature not matching. [default: 10]
+    -i MZML_FILE      names of files with chromatograms to be aligned
+    -f FEATURE_FILE   names of files with detected features in chromatograms,
+                      order of filenames should conform order of input data
+                      files. POSIX compliance requires to every features
+                      filename be preceded by -f
+    -o OUT_FILENAME   Output consensus filename [default: consensus.out]
+    -c SCALING_CONST  Additional constant by which RT should be scaled.
+                      [default: 1]
+    -t MIDS_THRSH     Distance threshold between centroid in one cluster. Not
+                      applicable when aligning two chromatograms. [default: 1.5]
+    -m MIDS_UP_BOUND  Maximum cetroid distance between which GWD will be computed.
+                      For efficiency reasons should be reasonably small.
+                      [default: 10]
+    -w GWD_UP_BOUND   Cost of not transporting a part of signal, aka the
+                      lambda parameter. Can be interpreted as maximal distance
+                      over which signal is transported while computing GWD.
+                      [default: 10]
+    -p PENALTY        penalty for feature not matching. [default: 10]
 """
 # TODO add parameter for verbosity level
 
@@ -62,10 +63,9 @@ def main():
             feature.scale_rt(average_weight * C)
 
     # Aligning
-    if len(arguments["-r"]) > 2:
+    if len(chromatogram_filenames) > 2:
         mids, big_clusters, clusters = cluster_mids(
-            feature_sets_list, distance_threshold=float(arguments["-t"]),
-            clusters_flat=True)
+            feature_sets_list, distance_threshold=float(arguments["-t"]))
         # TODO Pararel function chosen by parameter
         consensus_features = find_consensus_features_paralel(
             clusters, feature_sets_list,
@@ -84,7 +84,7 @@ def main():
         )
 
     # Dump
-    if len(arguments["-f"]) == 0:
+    if len(arguments["-f"]) > 0:
         openms_features = [parse_features_from_file(filename)
                            for filename in arguments["-f"]]
     else:
