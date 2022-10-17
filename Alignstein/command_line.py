@@ -2,16 +2,15 @@
 
 Usage: align.py -h
        align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-m MIDS_UP_BOUND]
-                [-w GWD_UP_BOUND] [-p PENALTY] [-f FEATURE_FILE...] -r MZML_FILE...
+                [-w GWD_UP_BOUND] [-p PENALTY] [-f FEATURE_FILE...] [--] MZML_FILE...
 
+Arguments:
+    MZML_FILE     names of files with chromatograms to be aligned
 Options:
-    -r MZML_FILE     names of files with chromatograms to be aligned
-
     -f FEATURE_FILE  names of files with detected features in chromatograms,
                      order of filenames should conform order of input data
-                     files. For clear option definition every feature filename
-                     should be prefixed with -f. If not provided features are
-                     detected and dumped into featureXML files.
+                     files. Separate feature list from chromatogram list using
+                     -- sign.
     -c SCALING_CONST Additional constant by which RT should be scaled.
                      [default: 1]
     -t MIDS_THRSH    Distance threshold between centroid in one cluster. Not
@@ -36,7 +35,7 @@ from .parse import *
 
 def main():
     arguments = docopt(__doc__)
-    chromatogram_filenames = arguments["-r"]
+    chromatogram_filenames = arguments["MZML_FILE"]
     feature_filenames = arguments["-f"]
 
     # Parsing
