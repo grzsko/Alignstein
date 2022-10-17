@@ -190,24 +190,6 @@ def gwd_distance_matrix_parallel(
     return dists
 
 
-def dump_consensus_features(consensus_features, filename,
-                            chromatograms_sets_list):
-    rows = []
-    with open(filename, "w") as outfile:
-        for consensus_feature in consensus_features:
-            row = []
-            next_set_id = 0
-            for set_i, chromatogram_j in sorted(consensus_feature):
-                # Leave empty space for not found consensus features
-                while set_i > next_set_id:
-                    row.append("")
-                    next_set_id += 1
-                f_id = chromatograms_sets_list[set_i][chromatogram_j].feature_id
-                row.append(f_id)
-            rows.append(" ".join(map(str, row)))
-        outfile.write("\n".join(rows))
-
-
 def find_pairwise_consensus_features(feature_set1, feature_set2,
                                      centroid_upper_bound=10,
                                      gwd_upper_bound=10,
@@ -258,4 +240,5 @@ def find_pairwise_consensus_features(feature_set1, feature_set2,
     for left_f_ind, right_f_ind in matchings:
         consensus_features.append([(0, left_f_ind), (1, right_f_ind)])
 
+    # TODO remove this matched left
     return consensus_features, [matched_left]

@@ -2,15 +2,18 @@
 
 Usage: align.py -h
        align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-m MIDS_UP_BOUND]
-                [-w GWD_UP_BOUND] [-p PENALTY] [-f FEATURE_FILE...] [--] MZML_FILE...
+                [-w GWD_UP_BOUND] [-p PENALTY] [-o OUT_FILENAME]
+                [-f FEATURE_FILE...] [--] MZML_FILE...
 
 Arguments:
-    MZML_FILE     names of files with chromatograms to be aligned
+    MZML_FILE        names of files with chromatograms to be aligned
+
 Options:
     -f FEATURE_FILE  names of files with detected features in chromatograms,
                      order of filenames should conform order of input data
                      files. Separate feature list from chromatogram list using
                      -- sign.
+    -o OUT_FILENAME  Output consensus filename [default: consensus.out]
     -c SCALING_CONST Additional constant by which RT should be scaled.
                      [default: 1]
     -t MIDS_THRSH    Distance threshold between centroid in one cluster. Not
@@ -31,6 +34,7 @@ from docopt import docopt
 from .align import *
 from .multialign import *
 from .parse import *
+from .dump import *
 
 
 def main():
@@ -63,13 +67,13 @@ def main():
             feature_sets_list, distance_threshold=float(arguments["-t"]),
             clusters_flat=True)
         # TODO Pararel function chosen by parameter
-        consensus_features = find_consensus_features(
+        consensus_features = find_consensus_features_paralel(
             clusters, feature_sets_list,
             centroid_upper_bound=float(arguments["-m"]),
             gwd_upper_bound=float(arguments["-w"]),
             matching_penalty=float(arguments["-p"]),
-            turns=10#,  # turn=10 is enough
-            #big_clusters=big_clusters
+            turns=10,  # 10 is enough
+            big_clusters=big_clusters
         )
     else:
         consensus_features, _ = find_pairwise_consensus_features(
@@ -80,9 +84,14 @@ def main():
         )
 
     # Dump
-    dump_consensus_features(consensus_features, "consensus.csv",
-                            feature_sets_list)
-    # TODO change it into featureXML file
+    if len(arguments["-f"]) == 0:
+        openms_features = [parse_features_from_file(filename)
+                           for filename in arguments["-f"]]
+    else:
+        openms_features = [detect_openms_features(filename)[1]
+                           for filename in chromatogram_filenames]
+    dump_consensus_features_caap_style(consensus_features, arguments["-o"],
+                                       feature_sets_list, openms_features)
 
 
 if __name__ == "__main__":

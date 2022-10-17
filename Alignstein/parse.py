@@ -204,6 +204,7 @@ def openms_feature_to_feature(openms_feature, input_map):
 
     ch = Chromatogram(rts, mzs, ints)
     ch.normalize(keep_old=True)
+    # ch.openms_feature = openms_feature # Usable
     if hasattr(openms_feature, 'getUniqueId'):
         # Sometimes it is useful to have some information from other software
         #
@@ -246,6 +247,11 @@ def openms_features_to_features(input_map, openms_features, omit_empty=True):
         # numeration (e.g. from OpenMS or file) is stored in ext_id
     return chromatograms
 
+def detect_openms_features(filename):
+    input_map = parse_chromatogram_file(filename)
+    openms_features = find_features(input_map)
+    return input_map, openms_features
+
 
 def detect_features_from_file(filename):
     """
@@ -265,8 +271,7 @@ def detect_features_from_file(filename):
     list of Chromatogram
         Iterable of parsed features represented as chromatograms subsets.
     """
-    input_map = parse_chromatogram_file(filename)
-    openms_features = find_features(input_map)
+    input_map, openms_features = detect_openms_features(filename)
     print("Parsed file", filename, "\n", openms_features.size(),
           "OpenMS features found,\n")
     features = openms_features_to_features(input_map, openms_features)
@@ -318,30 +323,3 @@ def parse_chromatogram_with_detected_features(filename, features_filename):
     print("Parsed file", filename, "\n", openms_like_features.size(),
           "OpenMS features found.")
     return openms_features_to_features(input_map, openms_like_features)
-
-# def parse_chromatograms_and_features(chromatogram_filenames,
-#                                      features_filenames):
-#     """
-#     Parse chromatograms with provided featureXML files.
-#
-#     Parameters
-#     ----------
-#     chromatogram_filenames : iterable of str
-#         Filenames of chromatograms to be parsed.
-#     features_filenames : iterable of str
-#         Filenames of features (.featureXML) to be parsed. Must have same order
-#         as chromatograms_filenames
-#
-#     Returns
-#     -------
-#     list of lists of Chromatogram
-#         Parsed features with collected signal for consecutive chromatogram
-#         files.
-#     """
-#     feature_sets_list = []
-#     for chromatogram_fname, features_fname in zip(chromatogram_filenames,
-#                                                   features_filenames):
-#         feature_sets_list.append(
-#             parse_chromatogram_with_detected_features(
-#                 chromatogram_fname, features_fname))
-#     return feature_sets_list
