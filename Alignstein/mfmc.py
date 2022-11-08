@@ -24,8 +24,9 @@ def match_chromatograms(dists, penalty=40):
     G = nx.DiGraph()
 
     # WARNING! Both unmatched nodes pay for not pairing, contrary to pairing,
-    # where distance is paid once. So half of penalty should be interpreted as max
-    # distance for which it is acceptable to make a matching.
+    # where distance is paid once. So half of penalty should be interpreted as
+    # max distance for which it is acceptable to make a matching.
+    half_penalty = penalty / 2
 
     inds = np.nonzero(dists < np.inf)
     for i, j, dist in zip(*inds, dists[inds]):
@@ -35,7 +36,7 @@ def match_chromatograms(dists, penalty=40):
     for i in range(dists.shape[0]):
         G.add_edge((0, "s"), (1, i), capacity=1)
         G.add_edge((1, i), (-1, "trash"), capacity=1,
-                   weight=penalty * ROUNDING_COEF)
+                   weight=half_penalty * ROUNDING_COEF)
 
     if dists.shape[0] > dists.shape[1]:
         # if equal, add no extra rubbish path
@@ -45,7 +46,7 @@ def match_chromatograms(dists, penalty=40):
     for i in range(dists.shape[1]):
         G.add_edge((2, i), (0, "t"), capacity=1)
         G.add_edge((-1, "trash"), (2, i), capacity=1,
-                   weight=penalty * ROUNDING_COEF)
+                   weight=half_penalty * ROUNDING_COEF)
 
     if dists.shape[1] > dists.shape[0]:
         # if equal, add no extra rubbish path
