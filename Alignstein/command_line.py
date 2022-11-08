@@ -2,7 +2,7 @@
 
 Usage: align.py -h
        align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-m MIDS_UP_BOUND]
-                [-w GWD_UP_BOUND] [-p PENALTY] [-o OUT_FILENAME]
+                [-w GWD_UP_BOUND] [-p PENALTY] [-s] [-o OUT_FILENAME]
                 [-f FEATURE_FILE]... MZML_FILE...
 
 Arguments:
@@ -27,6 +27,7 @@ Options:
                       over which signal is transported while computing GWD.
                       [default: 10]
     -p PENALTY        penalty for feature not matching. [default: 10]
+    -s                Should be only indices of features be dumped? [default: False]
 """
 # TODO add parameter for verbosity level
 
@@ -45,9 +46,15 @@ def main():
 
     # Parsing
     if len(arguments["-f"]) == 0:
-        feature_sets_list = [
-            detect_features_from_file(fname) for fname in chromatogram_filenames
-        ]
+        feature_sets_list = []
+        openms_features = []
+        for fname in chromatogram_filenames:
+            input_map, single_openms_features = detect_openms_features(fname)
+            print("Parsed file", fname, "\n", single_openms_features.size(),
+                  "OpenMS features found,\n")
+            feature_sets_list.append(openms_features_to_features(
+                input_map, single_openms_features))
+            openms_features.append(single_openms_features)
     else:
         feature_sets_list = [
             parse_chromatogram_with_detected_features(ch_fname, fs_fname)
@@ -64,9 +71,10 @@ def main():
 
     # Aligning
     if len(chromatogram_filenames) > 2:
+        print("Clustering")
         mids, big_clusters, clusters = cluster_mids(
             feature_sets_list, distance_threshold=float(arguments["-t"]))
-        # TODO Pararel function chosen by parameter
+        print("Feature matching")
         consensus_features = find_consensus_features_paralel(
             clusters, feature_sets_list,
             centroid_upper_bound=float(arguments["-m"]),
@@ -76,6 +84,7 @@ def main():
             big_clusters=big_clusters
         )
     else:
+        print("Feature matching")
         consensus_features, _ = find_pairwise_consensus_features(
             *feature_sets_list,
             centroid_upper_bound=float(arguments["-m"]),
@@ -87,11 +96,13 @@ def main():
     if len(arguments["-f"]) > 0:
         openms_features = [parse_features_from_file(filename)
                            for filename in arguments["-f"]]
+
+    if arguments["-s"]:
+        dump_consensus_features(consensus_features, arguments["-o"],
+                                feature_sets_list)
     else:
-        openms_features = [detect_openms_features(filename)[1]
-                           for filename in chromatogram_filenames]
-    dump_consensus_features_caap_style(consensus_features, arguments["-o"],
-                                       feature_sets_list, openms_features)
+        dump_consensus_features_caap_style(consensus_features, arguments["-o"],
+                                           feature_sets_list, openms_features)
 
 
 if __name__ == "__main__":
