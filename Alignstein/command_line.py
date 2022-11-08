@@ -13,7 +13,9 @@ Options:
     -f FEATURE_FILE   names of files with detected features in chromatograms,
                       order of filenames should conform order of input data
                       files. POSIX compliance requires to every features
-                      filename be preceded by -f
+                      filename be preceded by -f. Detected features are dumped
+                      chromatogram directory with additional featureXML
+                      extention.
     -o OUT_FILENAME   Output consensus filename [default: consensus.out]
     -c SCALING_CONST  Additional constant by which RT should be scaled.
                       [default: 1]
@@ -46,15 +48,11 @@ def main():
 
     # Parsing
     if len(arguments["-f"]) == 0:
-        feature_sets_list = []
-        openms_features = []
-        for fname in chromatogram_filenames:
-            input_map, single_openms_features = detect_openms_features(fname)
-            print("Parsed file", fname, "\n", single_openms_features.size(),
-                  "OpenMS features found,\n")
-            feature_sets_list.append(openms_features_to_features(
-                input_map, single_openms_features))
-            openms_features.append(single_openms_features)
+        feature_sets_list = [
+            detect_features_from_file(fname) for fname in chromatogram_filenames
+        ]
+        for ch_fname in chromatogram_filenames:
+            arguments["-f"].append(ch_fname + ".featureXML")
     else:
         feature_sets_list = [
             parse_chromatogram_with_detected_features(ch_fname, fs_fname)
@@ -93,9 +91,8 @@ def main():
         )
 
     # Dump
-    if len(arguments["-f"]) > 0:
-        openms_features = [parse_features_from_file(filename)
-                           for filename in arguments["-f"]]
+    openms_features = [parse_features_from_file(filename)
+                       for filename in arguments["-f"]]
 
     if arguments["-s"]:
         dump_consensus_features(consensus_features, arguments["-o"],

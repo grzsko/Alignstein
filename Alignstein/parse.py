@@ -5,6 +5,7 @@ import numpy as np
 import pyopenms
 
 # from .OpenMSMimicry import MyCollection, OpenMSFeatureMimicry
+
 from .chromatogram import Chromatogram
 
 
@@ -250,6 +251,7 @@ def openms_features_to_features(input_map, openms_features, omit_empty=True):
 def detect_openms_features(filename):
     input_map = parse_chromatogram_file(filename)
     openms_features = find_features(input_map)
+    pyopenms.FeatureXMLFile().store(filename + ".featureXML", openms_features)
     return input_map, openms_features
 
 
