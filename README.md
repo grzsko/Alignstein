@@ -3,14 +3,15 @@ Alignstein
 
 LC-MS alignment algorithm based on Wasserstein distance.
 
-Installation
-------------
+## Installation
 1. Obtain MassSinkhornmetry package from https://github.com/grzsko/MassSinkhornmetry and install into environment.
 2. Install requirements `pip install -r requirements.txt`.
 3. Install Alignstein into your environment: `python setup.py develop`.
 
-Usage
------
+### Installation instructions for Windows users
+Alignstein is primarly designed for Linux or macOS. For using Alignstein on Windows (or do not want to hussle with installation), the easiest way is to pull a [grzsko/alignstein](https://hub.docker.com/r/grzsko/alignstein) Docker image or build it on your own from a [Dockerfile](docker/Dockerfile).
+
+## Usage
 Alignstein package can be used as a Python3 library and its usage is described in the Jupyter notebook with tutorial under `tutorials` directory.
 
 Moreover, it is possible to use Alignstein from bash.
