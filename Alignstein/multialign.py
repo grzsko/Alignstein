@@ -128,7 +128,8 @@ def find_consensus_features(clusters, feature_sets_list,
                 print("Process: {}. Breaking at turn ".format(curr_proc), turn)
                 break  # there is nothing more to be matched in next turns
             for feature_j, cluster in matchings:
-                consensus_features[turn][int(cluster)].append((sample_i, feature_j))
+                consensus_features[turn][int(cluster)].append(
+                    (sample_i, feature_j))
             dists[list(matched_left)] = np.inf  # simply stupid way to omit
             # already used chromatograms (indeed, maybe confusing, but previous
             # line changes whole rows)
@@ -189,11 +190,14 @@ def find_consensus_features_paralel(clusters, feature_sets_list,
     big_clusters = big_clusters.astype(int)
     assert len(np.unique(big_clusters)) == np.max(big_clusters) + 1
     big_clusters_number = len(np.unique(big_clusters))
-    feature_id_mapping: list[list[list[int]]] = [[[] for _2 in range(len(feature_sets_list))] for _ in range(big_clusters_number)]
-    features_separated: list[list[list[Chromatogram]]] = [ # features separated by big clusters
-        [
-            [] for _2 in range(len(feature_sets_list))
-        ] for _ in range(big_clusters_number)]
+    feature_id_mapping: list[list[list[int]]] = [
+        [[] for _2 in range(len(feature_sets_list))] for _ in
+        range(big_clusters_number)]
+    features_separated: list[list[list[Chromatogram]]] = [
+        # features separated by big clusters
+        [[] for _2 in range(len(feature_sets_list))]
+        for _ in range(big_clusters_number)
+    ]
     i = 0
     for fset_id, fset in enumerate(feature_sets_list):
         for f_id, feature in enumerate(fset):
@@ -206,7 +210,8 @@ def find_consensus_features_paralel(clusters, feature_sets_list,
         separated_cfeatures = list(
             outer_pool.map(find_consensus_features,
                            clusters_separated, features_separated,
-                           repeat(centroid_upper_bound), repeat(gwd_upper_bound),
+                           repeat(centroid_upper_bound),
+                           repeat(gwd_upper_bound),
                            repeat(matching_penalty), repeat(turns),
                            repeat(mz_mid_upper_bound),
                            repeat(monoisotopic_max_dist), repeat(eps)))
@@ -217,9 +222,11 @@ def find_consensus_features_paralel(clusters, feature_sets_list,
         for cfeature in big_cluster_cfeatures:
             mapped_cfeature = []
             for set_id, f_id in cfeature:
-                mapped_cfeature.append((set_id, feature_id_mapping[big_cluster_id][set_id][f_id]))
+                mapped_cfeature.append(
+                    (set_id, feature_id_mapping[big_cluster_id][set_id][f_id]))
             consensus_features.append(mapped_cfeature)
     return consensus_features
+
 
 def precluster_mids(mids):
     return np.array(
@@ -242,10 +249,10 @@ def cluster_mids_subsets(mids, distance_threshold=10):
                                    ).fit_predict(mids_log)
 
 
-def big_clusters_to_clusters(mids, big_clusters, distance_threshold=5,
-                             clusters_flat=False):
+def big_clusters_to_clusters(mids, big_clusters, distance_threshold=5):
     """
     Do clustering over rough preclusters.
+
     Parameters
     ----------
     mids
@@ -256,31 +263,22 @@ def big_clusters_to_clusters(mids, big_clusters, distance_threshold=5,
         Maximum distance between centroid in one cluster.
     Returns
     -------
-    list of ints
-        Clusters
+    list of lists of ints
+        Clusters stored separately for every big precluster
     """
-    # TODO make it better
-    if clusters_flat:
-        clusters = -1 * np.ones(len(mids))
-    else:
-        clusters = []
+    clusters = []
     for i in range(np.max(big_clusters) + 1):
         inds = np.where(big_clusters == i)
         mids_subset = mids[inds]
         clusters_subsets = cluster_mids_subsets(
             mids_subset, distance_threshold=distance_threshold)
-        if clusters_flat:
-            clusters[inds] = clusters_subsets + np.max(clusters) + 1
-        else:
-            clusters.append(clusters_subsets)
+        clusters.append(clusters_subsets)
     return clusters
 
 
-def cluster_mids(feature_sets_list, distance_threshold=5, clusters_flat=False):
+def cluster_mids(feature_sets_list, distance_threshold=5):
     mids = gather_mids(feature_sets_list)
     big_clusters = precluster_mids(mids)
     clusters = big_clusters_to_clusters(mids, big_clusters,
-                                        distance_threshold=distance_threshold,
-                                        clusters_flat=clusters_flat)
+                                        distance_threshold=distance_threshold)
     return mids, big_clusters, clusters
-    # TODO Do it better with this clusters_flat
