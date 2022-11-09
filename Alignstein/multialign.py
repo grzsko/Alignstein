@@ -1,3 +1,4 @@
+import gc
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 from itertools import repeat
@@ -9,7 +10,7 @@ from .chromatogram import Chromatogram
 from .align import gwd_distance_matrix_parallel
 from .mfmc import match_chromatograms_gathered_by_clusters
 
-_BIG_CLUSTER_COUNT = 16
+_BIG_CLUSTER_COUNT = 32
 
 
 def gather_mids(feature_sets_list):
@@ -101,7 +102,7 @@ def find_consensus_features(clusters, feature_sets_list,
     consensus_features = [[[] for _ in range(len(np.unique(clusters)))]
                           for _ in range(turns)]
     import time
-    curr_proc = multiprocessing.current_process()
+    curr_proc = multiprocessing.current_process().pid
     for sample_i, one_sample_features in enumerate(feature_sets_list):
         rest_of_features, clusters_filtered = flatten_chromatograms(
             feature_sets_list, clusters,
@@ -131,6 +132,7 @@ def find_consensus_features(clusters, feature_sets_list,
             dists[list(matched_left)] = np.inf  # simply stupid way to omit
             # already used chromatograms (indeed, maybe confusing, but previous
             # line changes whole rows)
+        gc.collect()
 
     succeeded_consensus_features = []
     for one_turn_c_features in consensus_features:
