@@ -29,9 +29,11 @@ Options:
                       over which signal is transported while computing GWD.
                       [default: 10]
     -p PENALTY        penalty for feature not matching. [default: 10]
-    -s                Should be only indices of features be dumped? [default: False]
+    -s                Should be only indices of features be dumped?
+                      [default: False]
 """
-# TODO add parameter for verbosity level
+
+import gc
 
 from docopt import docopt
 
@@ -72,6 +74,7 @@ def main():
         print("Clustering")
         mids, big_clusters, clusters = cluster_mids(
             feature_sets_list, distance_threshold=float(arguments["-t"]))
+        gc.collect()
         print("Feature matching")
         consensus_features = find_consensus_features_paralel(
             clusters, feature_sets_list,

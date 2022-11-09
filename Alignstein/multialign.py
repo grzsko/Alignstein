@@ -1,13 +1,12 @@
+import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
-from contextlib import closing
 from itertools import repeat
-from typing import List, Any
 
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 
 from .chromatogram import Chromatogram
-from .align import gwd_distance_matrix, gwd_distance_matrix_parallel
+from .align import gwd_distance_matrix_parallel
 from .mfmc import match_chromatograms_gathered_by_clusters
 
 _BIG_CLUSTER_COUNT = 16
@@ -100,6 +99,7 @@ def find_consensus_features(clusters, feature_sets_list,
     consensus_features = [[[] for _ in range(len(np.unique(clusters)))]
                           for _ in range(turns)]
     import time
+    curr_proc = multiprocessing.current_process()
     for sample_i, one_sample_features in enumerate(feature_sets_list):
         rest_of_features, clusters_filtered = flatten_chromatograms(
             feature_sets_list, clusters,
@@ -110,17 +110,19 @@ def find_consensus_features(clusters, feature_sets_list,
             centroid_upper_bound=centroid_upper_bound,
             gwd_upper_bound=gwd_upper_bound,
             mz_mid_upper_bound=mz_mid_upper_bound,
+            monoistopic_max_dist=monoistopic_max_dist,
             eps=eps)
-        print("Dists calculated in:", time.time() - start)
+        print("Process: {}. Dists for sample {} calculated in:".format(
+            curr_proc, sample_i), time.time() - start)
 
         for turn in range(turns):
             start = time.time()
             matchings, matched_left, matched_right = \
                 match_chromatograms_gathered_by_clusters(
                     dists, clusters_filtered, matching_penalty)
-            print("Matching done in:", time.time() - start)
+            print("Process: {}. Matching done in:".format(curr_proc), time.time() - start)
             if len(matchings) == 0:
-                print("Breaking at turn ", turn)
+                print("Process: {}. Breaking at turn ".format(curr_proc), turn)
                 break  # there is nothing more to be matched in next turns
             for feature_j, cluster in matchings:
                 consensus_features[turn][int(cluster)].append((sample_i, feature_j))
@@ -192,13 +194,15 @@ def find_consensus_features_paralel(clusters, feature_sets_list,
             feature_id_mapping[big_clusters[i]][fset_id].append(f_id)
             i += 1
     clusters_separated = clusters
+    print("Parallel matching prepared, matching starting")
     with ProcessPoolExecutor(max_workers=_BIG_CLUSTER_COUNT) as outer_pool:
         separated_cfeatures = list(
             outer_pool.map(find_consensus_features,
                            clusters_separated, features_separated,
                            repeat(centroid_upper_bound), repeat(gwd_upper_bound),
                            repeat(matching_penalty), repeat(turns),
-                           repeat(mz_mid_upper_bound), repeat(eps)))
+                           repeat(mz_mid_upper_bound),
+                           repeat(monoistopic_max_dist), repeat(eps)))
 
     # 3. Merge results
     consensus_features = []
