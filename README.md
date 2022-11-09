@@ -54,3 +54,7 @@ Options:
     -p PENALTY        penalty for feature not matching. [default: 10]
 ```
 As a result the detected features are dumped as well as consenus features consensus.csv file.
+
+## Cite us!
+If you use this tool or find this work interesting, do not forget to cite out paper:
+> Grzegorz Skoraczyński, Anna Gambin, Błażej Miasojedow, Alignstein: Optimal transport for improved LC-MS retention time alignment, *GigaScience*, Volume 11, 2022, giac101, https://doi.org/10.1093/gigascience/giac101
