@@ -56,7 +56,7 @@ def gwd_distance_matrix(chromatograms1: list[Chromatogram],
                         centroid_upper_bound=10,
                         gwd_upper_bound=40,
                         mz_mid_upper_bound=float("inf"),
-                        monoistopic_max_dist=float("inf"),
+                        monoisotopic_max_dist=float("inf"),
                         eps=0.1):
     """
     Compute GWD distance matrix between two feature sets.
@@ -78,7 +78,7 @@ def gwd_distance_matrix(chromatograms1: list[Chromatogram],
         Penalty for not transporting a part of signal, aka the lambda parameter.
         Can cen interpreted as maximal distance over which signal is
         transported.
-    monoistopic_max_dist : float
+    monoisotopic_max_dist : float
         Additional parameter if GDW should computed only for features with
         monoisotopic mass difference lower than this parameter. May stabilise
         the results
@@ -105,7 +105,7 @@ def gwd_distance_matrix(chromatograms1: list[Chromatogram],
             if not chi.empty and not chj.empty:
                 if (mid_dist(chi, chj) <= centroid_upper_bound and
                         mid_mz_dist(chi, chj) < mz_mid_upper_bound and
-                        monoisotopic_dist(chi, chj) < monoistopic_max_dist):
+                        monoisotopic_dist(chi, chj) < monoisotopic_max_dist):
                     dists[i, j] = feature_dist(
                         chi, chj, penalty=gwd_upper_bound, eps=eps)
                 tick += 1
@@ -148,7 +148,7 @@ def async_col_distances(chromatogram):
 def gwd_distance_matrix_parallel(
         chromatograms1: list[Chromatogram], chromatograms2: list[Chromatogram],
         centroid_upper_bound=10, gwd_upper_bound=40,
-        mz_mid_upper_bound=float("inf"), monoistopic_max_dist=float("inf"),
+        mz_mid_upper_bound=float("inf"), monoisotopic_max_dist=float("inf"),
         eps=0.1):
     """
     Compute GWD distance matrix between two feature sets, paralelized version.
@@ -189,7 +189,7 @@ def gwd_distance_matrix_parallel(
                 "centroid_upper_bound": centroid_upper_bound,
                 "gwd_upper_bound": gwd_upper_bound,
                 "mz_mid_upper_bound": mz_mid_upper_bound,
-                "monoistopic_max_dist": monoistopic_max_dist,
+                "monoisotopic_max_dist": monoisotopic_max_dist,
                 "eps": eps})) as pool:
         # TODO Make dists sparse
         columns = [pool.apply_async(async_col_distances, [ch]) \
@@ -211,7 +211,7 @@ def find_pairwise_consensus_features(feature_set1, feature_set2,
                                      gwd_upper_bound=10,
                                      matching_penalty=5,
                                      mz_mid_upper_bound=2,
-                                     monoistopic_max_dist=float("inf"),
+                                     monoisotopic_max_dist=float("inf"),
                                      eps=0.1):
     """
     Find consensus features between two feature sets.
@@ -249,7 +249,7 @@ def find_pairwise_consensus_features(feature_set1, feature_set2,
         centroid_upper_bound=centroid_upper_bound,
         gwd_upper_bound=gwd_upper_bound,
         mz_mid_upper_bound=mz_mid_upper_bound,
-        monoistopic_max_dist=monoistopic_max_dist,
+        monoisotopic_max_dist=monoisotopic_max_dist,
         eps=eps)
 
     matchings, matched_left, matched_right = match_chromatograms(

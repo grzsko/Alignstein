@@ -67,7 +67,7 @@ def find_consensus_features(clusters, feature_sets_list,
                             centroid_upper_bound=10, gwd_upper_bound=10,
                             matching_penalty=5, turns=10,
                             mz_mid_upper_bound=float("inf"),
-                            monoistopic_max_dist=float("inf"),
+                            monoisotopic_max_dist=float("inf"),
                             eps=0.1):
     """
     Find consensus feature in preclustered dataset.
@@ -112,7 +112,7 @@ def find_consensus_features(clusters, feature_sets_list,
             centroid_upper_bound=centroid_upper_bound,
             gwd_upper_bound=gwd_upper_bound,
             mz_mid_upper_bound=mz_mid_upper_bound,
-            monoistopic_max_dist=monoistopic_max_dist,
+            monoisotopic_max_dist=monoisotopic_max_dist,
             eps=eps)
         print("Process: {}. Dists for sample {} calculated in:".format(
             curr_proc, sample_i), time.time() - start)
@@ -144,7 +144,7 @@ def find_consensus_features_paralel(clusters, feature_sets_list,
                                     centroid_upper_bound=10, gwd_upper_bound=10,
                                     matching_penalty=5, turns=10,
                                     mz_mid_upper_bound=float("inf"),
-                                    monoistopic_max_dist=float("inf"),
+                                    monoisotopic_max_dist=float("inf"),
                                     eps=0.1,
                                     big_clusters=None):
     """
@@ -171,7 +171,7 @@ def find_consensus_features_paralel(clusters, feature_sets_list,
     mz_mid_upper_bound : float
         Additional parameter if GDW should be computed only for features with
         centroid M/Z difference lower than this parameter. Usually not used.
-    monoistopic_max_dist : float
+    monoisotopic_max_dist : float
     eps : float
         GWD entropic penalization coefficient, aka the epsilon parameter.
         Default value is chosen reasonably. Change it only if you understand how
@@ -207,7 +207,7 @@ def find_consensus_features_paralel(clusters, feature_sets_list,
                            repeat(centroid_upper_bound), repeat(gwd_upper_bound),
                            repeat(matching_penalty), repeat(turns),
                            repeat(mz_mid_upper_bound),
-                           repeat(monoistopic_max_dist), repeat(eps)))
+                           repeat(monoisotopic_max_dist), repeat(eps)))
 
     # 3. Merge results
     consensus_features = []
