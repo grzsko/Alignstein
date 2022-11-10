@@ -96,9 +96,8 @@ def find_consensus_features(clusters, feature_sets_list,
 
     Returns
     -------
-    Complicated consensus features.
+    Consensus features.
     """
-    # TODO Refactor this function
     consensus_features = [[[] for _ in range(len(np.unique(clusters)))]
                           for _ in range(turns)]
     import time
@@ -125,7 +124,8 @@ def find_consensus_features(clusters, feature_sets_list,
                     dists, clusters_filtered, matching_penalty)
             print("Process: {}. Matching done in:".format(curr_proc), time.time() - start)
             if len(matchings) == 0:
-                print("Process: {}. Breaking at turn ".format(curr_proc), turn)
+                print("Process: {}. Breaking at turn ".format(curr_proc), turn,
+                      flush=True)
                 break  # there is nothing more to be matched in next turns
             for feature_j, cluster in matchings:
                 consensus_features[turn][int(cluster)].append(
@@ -143,13 +143,14 @@ def find_consensus_features(clusters, feature_sets_list,
     return succeeded_consensus_features
 
 
-def find_consensus_features_paralel(clusters, feature_sets_list,
-                                    centroid_upper_bound=10, gwd_upper_bound=10,
-                                    matching_penalty=5, turns=10,
-                                    mz_mid_upper_bound=float("inf"),
-                                    monoisotopic_max_dist=float("inf"),
-                                    eps=0.1,
-                                    big_clusters=None):
+def find_consensus_features_parallel(clusters, feature_sets_list,
+                                     centroid_upper_bound=10, gwd_upper_bound=10,
+                                     matching_penalty=5, turns=10,
+                                     mz_mid_upper_bound=float("inf"),
+                                     monoisotopic_max_dist=float("inf"),
+                                     eps=0.1,
+                                     big_clusters=None,
+                                     workers_number=12):
     """
     Find consensus feature in preclustered dataset paralelized version.
 
@@ -206,7 +207,7 @@ def find_consensus_features_paralel(clusters, feature_sets_list,
             i += 1
     clusters_separated = clusters
     print("Parallel matching prepared, matching starting")
-    with ProcessPoolExecutor(max_workers=_BIG_CLUSTER_COUNT) as outer_pool:
+    with ProcessPoolExecutor(max_workers=workers_number) as outer_pool:
         separated_cfeatures = list(
             outer_pool.map(find_consensus_features,
                            clusters_separated, features_separated,

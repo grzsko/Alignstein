@@ -95,11 +95,6 @@ def gwd_distance_matrix(chromatograms1: list[Chromatogram],
     total = len(chromatograms1) * len(chromatograms2)
     dists = np.full((len(chromatograms1), len(chromatograms2)), np.inf)
 
-    tick = 0
-    pbar = tqdm(total=total)
-    print("Calculating distances")
-    # TODO Think is parallelization is possible
-    # TODO Make dists sparse
     for i, chi in enumerate(chromatograms1):
         for j, chj in enumerate(chromatograms2):
             if not chi.empty and not chj.empty:
@@ -108,15 +103,6 @@ def gwd_distance_matrix(chromatograms1: list[Chromatogram],
                         monoisotopic_dist(chi, chj) < monoisotopic_max_dist):
                     dists[i, j] = feature_dist(
                         chi, chj, penalty=gwd_upper_bound, eps=eps)
-                tick += 1
-                if tick % 300 == 0:
-                    pbar.update(300)
-    pbar.close()
-    print("Calculated dists, number of nans:", np.sum(np.isnan(dists)))
-    print("All columns have any row non zero:",
-          np.all(np.any(dists < np.inf, axis=0)))
-    print("All rows have any column non zero:",
-          np.all(np.any(dists < np.inf, axis=1)))
     return dists
 
 
@@ -198,11 +184,6 @@ def gwd_distance_matrix_parallel(
         # more flexibility in spawning data over processes and less data is
         # copied to all processes
         dists = np.column_stack([column.get() for column in columns])
-    print("Calculated dists, number of nans:", np.sum(np.isnan(dists)))
-    print("All columns have any row non zero:",
-          np.all(np.any(dists < np.inf, axis=0)))
-    print("All rows have any column non zero:",
-          np.all(np.any(dists < np.inf, axis=1)))
     return dists
 
 

@@ -2,14 +2,13 @@
 
 Usage: align.py -h
        align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-m MIDS_UP_BOUND]
-                [-w GWD_UP_BOUND] [-p PENALTY] [-s] [-o OUT_FILENAME]
-                [-f FEATURE_FILE]... MZML_FILE...
+                [-w GWD_UP_BOUND] [-p PENALTY] [-s] [-n WORKERS_NUMB]
+                [-o OUT_FILENAME] [-f FEATURE_FILE]... MZML_FILE...
 
 Arguments:
     MZML_FILE      names of files with chromatograms to be aligned
 
 Options:
-    -i MZML_FILE      names of files with chromatograms to be aligned
     -f FEATURE_FILE   names of files with detected features in chromatograms,
                       order of filenames should conform order of input data
                       files. POSIX compliance requires to every features
@@ -31,6 +30,8 @@ Options:
     -p PENALTY        penalty for feature not matching. [default: 10]
     -s                Should be only indices of features be dumped?
                       [default: False]
+    -n WORKERS_NUMB   max number of processes used for parallelization
+                      [default: 12]
 """
 
 import gc
@@ -76,13 +77,14 @@ def main():
             feature_sets_list, distance_threshold=float(arguments["-t"]))
         gc.collect()
         print("Feature matching")
-        consensus_features = find_consensus_features_paralel(
+        consensus_features = find_consensus_features_parallel(
             clusters, feature_sets_list,
             centroid_upper_bound=float(arguments["-m"]),
             gwd_upper_bound=float(arguments["-w"]),
             matching_penalty=float(arguments["-p"]),
             turns=10,  # 10 is enough
-            big_clusters=big_clusters
+            big_clusters=big_clusters,
+            workers_number=int(arguments["-n"])
         )
     else:
         print("Feature matching")
