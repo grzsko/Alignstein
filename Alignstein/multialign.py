@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 
 from .chromatogram import Chromatogram
-from .align import gwd_distance_matrix_parallel
+from .align import gwd_distance_matrix_parallel, gwd_distance_matrix
 from .mfmc import match_chromatograms_gathered_by_clusters
 
 _BIG_CLUSTER_COUNT = 32
@@ -42,8 +42,7 @@ def gather_mids(feature_sets_list):
 
 def flatten_chromatograms(chromatograms_sets_list, clusters,
                           exclude_chromatogram_sets=[]):
-    _, count = np.unique(clusters,  # [idx_sort],
-                         return_counts=True)
+    _, count = np.unique(clusters, return_counts=True)
     print("Average cluster size:", np.mean(count))
     flat_chromatograms = []
     filtered_clusters = []
@@ -107,7 +106,7 @@ def find_consensus_features(clusters, feature_sets_list,
             feature_sets_list, clusters,
             exclude_chromatogram_sets=[sample_i])
         start = time.time()
-        dists = gwd_distance_matrix_parallel(
+        dists = gwd_distance_matrix(
             one_sample_features, rest_of_features,
             centroid_upper_bound=centroid_upper_bound,
             gwd_upper_bound=gwd_upper_bound,
@@ -148,8 +147,7 @@ def find_consensus_features_parallel(clusters, feature_sets_list,
                                      matching_penalty=5, turns=10,
                                      mz_mid_upper_bound=float("inf"),
                                      monoisotopic_max_dist=float("inf"),
-                                     eps=0.1,
-                                     big_clusters=None,
+                                     eps=0.1, big_clusters=None,
                                      workers_number=12):
     """
     Find consensus feature in preclustered dataset paralelized version.
@@ -161,8 +159,8 @@ def find_consensus_features_parallel(clusters, feature_sets_list,
 
     Parameters
     ----------
-    clusters
-    feature_sets_list
+    workers_number : int
+        Max number of processes for parallelization
     centroid_upper_bound : float
         Maximum cetroid distance between which GWD will computed. For efficiency
         reasons should be reasonably small.
