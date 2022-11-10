@@ -203,7 +203,7 @@ def openms_feature_to_feature(openms_feature, input_map):
                     rts.append(rt)
                     ints.append(i)
 
-    ch = Chromatogram(rts, mzs, ints)
+    ch = Chromatogram(rts, mzs, ints, openms_feature.getMZ())
     ch.normalize(keep_old=True)
     # ch.openms_feature = openms_feature # Usable
     if hasattr(openms_feature, 'getUniqueId'):

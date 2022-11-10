@@ -10,7 +10,7 @@ from .chromatogram import Chromatogram
 from .align import gwd_distance_matrix_parallel, gwd_distance_matrix
 from .mfmc import match_chromatograms_gathered_by_clusters
 
-_BIG_CLUSTER_COUNT = 32
+_BIG_CLUSTER_COUNT = 16 # Not more, because empty areas may occur
 
 
 def gather_mids(feature_sets_list):
@@ -67,7 +67,7 @@ def find_consensus_features(clusters, feature_sets_list,
                             centroid_upper_bound=10, gwd_upper_bound=10,
                             matching_penalty=5, turns=10,
                             mz_mid_upper_bound=float("inf"),
-                            monoisotopic_max_dist=float("inf"),
+                            monoisotopic_max_ppm=1,
                             eps=0.1):
     """
     Find consensus feature in preclustered dataset.
@@ -106,15 +106,15 @@ def find_consensus_features(clusters, feature_sets_list,
             feature_sets_list, clusters,
             exclude_chromatogram_sets=[sample_i])
         start = time.time()
-        dists = gwd_distance_matrix(
+        dists = gwd_distance_matrix_parallel(
             one_sample_features, rest_of_features,
             centroid_upper_bound=centroid_upper_bound,
             gwd_upper_bound=gwd_upper_bound,
             mz_mid_upper_bound=mz_mid_upper_bound,
-            monoisotopic_max_dist=monoisotopic_max_dist,
+            monoisotopic_max_ppm=monoisotopic_max_ppm,
             eps=eps)
-        print("Process: {}. Dists for sample {} calculated in:".format(
-            curr_proc, sample_i), time.time() - start)
+        print("Process: {}. Distances for fraction of sample {} calculated in: {}".format(
+            curr_proc, sample_i, time.time() - start))
 
         for turn in range(turns):
             start = time.time()
@@ -123,8 +123,6 @@ def find_consensus_features(clusters, feature_sets_list,
                     dists, clusters_filtered, matching_penalty)
             print("Process: {}. Matching done in:".format(curr_proc), time.time() - start)
             if len(matchings) == 0:
-                print("Process: {}. Breaking at turn ".format(curr_proc), turn,
-                      flush=True)
                 break  # there is nothing more to be matched in next turns
             for feature_j, cluster in matchings:
                 consensus_features[turn][int(cluster)].append(
@@ -132,6 +130,7 @@ def find_consensus_features(clusters, feature_sets_list,
             dists[list(matched_left)] = np.inf  # simply stupid way to omit
             # already used chromatograms (indeed, maybe confusing, but previous
             # line changes whole rows)
+        print("Process: {}. Broke at turn {}".format(curr_proc, turn))
         gc.collect()
 
     succeeded_consensus_features = []
@@ -146,7 +145,7 @@ def find_consensus_features_parallel(clusters, feature_sets_list,
                                      centroid_upper_bound=10, gwd_upper_bound=10,
                                      matching_penalty=5, turns=10,
                                      mz_mid_upper_bound=float("inf"),
-                                     monoisotopic_max_dist=float("inf"),
+                                     monoisotopic_max_ppm=1,
                                      eps=0.1, big_clusters=None,
                                      workers_number=12):
     """
@@ -173,7 +172,8 @@ def find_consensus_features_parallel(clusters, feature_sets_list,
     mz_mid_upper_bound : float
         Additional parameter if GDW should be computed only for features with
         centroid M/Z difference lower than this parameter. Usually not used.
-    monoisotopic_max_dist : float
+    monoisotopic_max_ppm : float
+        Maximal distance of feature monoisotopic masses to be matched.
     eps : float
         GWD entropic penalization coefficient, aka the epsilon parameter.
         Default value is chosen reasonably. Change it only if you understand how
@@ -183,7 +183,7 @@ def find_consensus_features_parallel(clusters, feature_sets_list,
 
     Returns
     -------
-    Complicated consensus features.
+    Consensus features.
     """
     # 1. Split inputs by big clusters
     big_clusters = big_clusters.astype(int)
@@ -213,7 +213,7 @@ def find_consensus_features_parallel(clusters, feature_sets_list,
                            repeat(gwd_upper_bound),
                            repeat(matching_penalty), repeat(turns),
                            repeat(mz_mid_upper_bound),
-                           repeat(monoisotopic_max_dist), repeat(eps)))
+                           repeat(monoisotopic_max_ppm), repeat(eps)))
 
     # 3. Merge results
     consensus_features = []

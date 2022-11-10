@@ -2,8 +2,9 @@
 
 Usage: align.py -h
        align.py [-c SCALING_CONST] [-t MIDS_THRSH] [-m MIDS_UP_BOUND]
-                [-w GWD_UP_BOUND] [-p PENALTY] [-s] [-n WORKERS_NUMB]
-                [-o OUT_FILENAME] [-f FEATURE_FILE]... MZML_FILE...
+                [-i MONOISO_THRSH] [-w GWD_UP_BOUND] [-p PENALTY] [-s]
+                [-n WORKERS_NUMB] [-o OUT_FILENAME] [-f FEATURE_FILE]...
+                MZML_FILE...
 
 Arguments:
     MZML_FILE      names of files with chromatograms to be aligned
@@ -23,6 +24,8 @@ Options:
     -m MIDS_UP_BOUND  Maximum cetroid distance between which GWD will be computed.
                       For efficiency reasons should be reasonably small.
                       [default: 10]
+    -i MONOISO_THRSH  Maximum ppm difference of feature monoisotopic massess for
+                      which GWD will be computed. [default: 20]
     -w GWD_UP_BOUND   Cost of not transporting a part of signal, aka the
                       lambda parameter. Can be interpreted as maximal distance
                       over which signal is transported while computing GWD.
@@ -83,6 +86,7 @@ def main():
             gwd_upper_bound=float(arguments["-w"]),
             matching_penalty=float(arguments["-p"]),
             turns=10,  # 10 is enough
+            monoisotopic_max_ppm=float(arguments["-i"]),
             big_clusters=big_clusters,
             workers_number=int(arguments["-n"])
         )
@@ -92,7 +96,8 @@ def main():
             *feature_sets_list,
             centroid_upper_bound=float(arguments["-m"]),
             gwd_upper_bound=float(arguments["-w"]),
-            matching_penalty=float(arguments["-p"])
+            matching_penalty=float(arguments["-p"]),
+            monoisotopic_max_ppm=float(arguments["-i"])
         )
 
     # Dump

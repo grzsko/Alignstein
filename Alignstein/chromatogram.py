@@ -25,11 +25,12 @@ class Chromatogram:
     """Class representing chromatogram or chromatogram subset (i.e. feature)."""
 
     # Assuming that MS1 and MS2 are centroided
-    def __init__(self, rts, mzs, ints):
+    def __init__(self, rts, mzs, ints, monoisotopic_mass=None):
         self.empty = len(rts) == 0
         self.rts = np.array(rts)
         self.mzs = np.array(mzs)
         self.ints = np.array(ints)
+        self._monoisotopic_mass = monoisotopic_mass
         #         self.tic = np.sum(ints)
         self._weight = None
         self._mid = None
@@ -52,6 +53,12 @@ class Chromatogram:
 
     def plot(self, ax):
         ax.scatter(self.rts, self.mzs, s=20, c=self.ints, cmap='RdBu')
+
+    @property
+    def monoisotopic_mass(self):
+        if self._monoisotopic_mass is None:
+            self._monoisotopic_mass = np.percentile(self.mzs, 10)
+        return self._monoisotopic_mass
 
     @property
     def confs(self):
