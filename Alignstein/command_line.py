@@ -33,8 +33,9 @@ Options:
     -p PENALTY        penalty for feature not matching. [default: 10]
     -s                Should be only indices of features be dumped?
                       [default: False]
-    -n WORKERS_NUMB   max number of processes used for parallelization
-                      [default: 12]
+    -n WORKERS_NUMB   max number of processes used for parallelization. For
+                      multialignment it should not be larger than 16
+                      [default: 16]
 """
 
 import gc
