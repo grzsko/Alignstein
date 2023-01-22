@@ -31,7 +31,8 @@ Options:
                       over which signal is transported while computing GWD.
                       [default: 10]
     -p PENALTY        penalty for feature not matching. [default: 10]
-    -s                Should be only indices of features be dumped?
+    -s                Indicates if as a result only feature indices should be
+                      dumped. Otherwise basic feature data are dumped.
                       [default: False]
     -n WORKERS_NUMB   max number of processes used for parallelization. For
                       multialignment it should not be larger than 16
