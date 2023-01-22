@@ -25,9 +25,9 @@ def dump_consensus_features_caap_style(consensus_features, out_filename,
             if len(consensus_feature) > 1:
                 row = []
                 for set_i, chromatogram_j in consensus_feature:
-                    caap_id = chromatograms_sets_list[set_i][
-                        chromatogram_j].ext_id
-                    pyopenms_feature = all_pyopenms_features[set_i][caap_id]
+                    openms_f_id = chromatograms_sets_list[
+                        set_i][chromatogram_j].feature_id
+                    pyopenms_feature = all_pyopenms_features[set_i][openms_f_id]
                     row.extend([pyopenms_feature.getIntensity(),
                                 pyopenms_feature.getRT(),
                                 pyopenms_feature.getMZ()])

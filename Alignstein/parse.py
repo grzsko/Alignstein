@@ -238,14 +238,17 @@ def openms_features_to_features(input_map, openms_features, omit_empty=True):
     chromatograms = []
     # Chromatogram class is universal, so we use it to represent chromatograms
     # subsets, i.e. features.
-    for openms_feature in openms_features:
+    for i, openms_feature in enumerate(openms_features):
         feature = openms_feature_to_feature(openms_feature, input_map)
         if (not omit_empty) or (not feature.empty):
             # i.e. omit only when both are true
+            feature.feature_id = i
+            # i is index of original feature, not omitted
+            # We identify features as detected, other enumeration (e.g. from
+            # OpenMS) is stored in ext_id
             chromatograms.append(feature)
     for i, feature in enumerate(chromatograms):
-        feature.feature_id = i  # We identify features as analyzed, other
-        # numeration (e.g. from OpenMS or file) is stored in ext_id
+        feature.feature_id = i
     return chromatograms
 
 def detect_openms_features(filename):
