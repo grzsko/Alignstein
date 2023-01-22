@@ -1,6 +1,7 @@
 from .align import *
-from .multialign import (cluster_mids, gather_mids,
-                         find_consensus_features_parallel)
+from .multialign import cluster_mids, gather_mids
+
+from .multialign import find_consensus_features_parallel as find_consensus_features
 
 from .chromatogram import Chromatogram
 

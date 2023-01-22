@@ -63,12 +63,12 @@ def flatten_chromatograms(chromatograms_sets_list, clusters,
     return flat_chromatograms, filtered_clusters
 
 
-def find_consensus_features(clusters, feature_sets_list,
-                            centroid_upper_bound=10, gwd_upper_bound=10,
-                            matching_penalty=5, turns=10,
-                            mz_mid_upper_bound=float("inf"),
-                            monoisotopic_max_ppm=1,
-                            eps=0.1):
+def _find_consensus_features(clusters, feature_sets_list,
+                             centroid_upper_bound=10, gwd_upper_bound=10,
+                             matching_penalty=5, turns=10,
+                             mz_mid_upper_bound=float("inf"),
+                             monoisotopic_max_ppm=1,
+                             eps=0.1):
     """
     Find consensus feature in preclustered dataset.
 
@@ -207,7 +207,7 @@ def find_consensus_features_parallel(clusters, feature_sets_list,
     print("Parallel matching prepared, matching starting")
     with ProcessPoolExecutor(max_workers=workers_number) as outer_pool:
         separated_cfeatures = list(
-            outer_pool.map(find_consensus_features,
+            outer_pool.map(_find_consensus_features,
                            clusters_separated, features_separated,
                            repeat(centroid_upper_bound),
                            repeat(gwd_upper_bound),
