@@ -31,8 +31,8 @@ Options:
                       over which signal is transported while computing GWD.
                       [default: 10]
     -p PENALTY        penalty for feature not matching. [default: 10]
-    -s                Indicates if as a result only feature indices should be
-                      dumped. Otherwise basic feature data are dumped.
+    -s                Indicates if as a result basic feature data are dumped.
+                      Otherwise feature indices are dumped.
                       [default: False]
     -n WORKERS_NUMB   max number of processes used for parallelization. For
                       multialignment it should not be larger than 16
@@ -106,7 +106,7 @@ def main():
     openms_features = [parse_features_from_file(filename)
                        for filename in arguments["-f"]]
 
-    if arguments["-s"]:
+    if not arguments["-s"]:
         dump_consensus_features(consensus_features, arguments["-o"],
                                 feature_sets_list)
     else:

@@ -106,7 +106,7 @@ def _find_consensus_features(clusters, feature_sets_list,
             feature_sets_list, clusters,
             exclude_chromatogram_sets=[sample_i])
         start = time.time()
-        dists = gwd_distance_matrix_parallel(
+        dists = gwd_distance_matrix(
             one_sample_features, rest_of_features,
             centroid_upper_bound=centroid_upper_bound,
             gwd_upper_bound=gwd_upper_bound,
@@ -145,7 +145,7 @@ def find_consensus_features_parallel(clusters, feature_sets_list,
                                      centroid_upper_bound=10, gwd_upper_bound=10,
                                      matching_penalty=5, turns=10,
                                      mz_mid_upper_bound=float("inf"),
-                                     monoisotopic_max_ppm=1,
+                                     monoisotopic_max_ppm=15,
                                      eps=0.1, big_clusters=None,
                                      workers_number=12):
     """
