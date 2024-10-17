@@ -187,6 +187,18 @@ def openms_feature_to_feature(openms_feature, input_map):
     Chromatogram
         A feature with gathered signal.
     """
+    def bisect_rt(ms_experiment, rt):
+        lo = 0
+        hi = len(ms_experiment.getSpectra())
+
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if ms_experiment[mid].getRT() < rt:
+                lo = mid + 1
+            else:
+                hi = mid
+        return lo
+
     max_rt, max_mz = openms_feature.getConvexHull().getBoundingBox().maxPosition()
     min_rt, min_mz = openms_feature.getConvexHull().getBoundingBox().minPosition()
 
@@ -194,14 +206,22 @@ def openms_feature_to_feature(openms_feature, input_map):
     rts = []
     ints = []
 
-    for openms_spectrum in input_map:  # indeed, it's a spectrum (single scan)
+    spectra_number = len(input_map.getSpectra())
+    spectrum_index = bisect_rt(input_map, min_rt)
+    while spectrum_index < spectra_number:
+        openms_spectrum = input_map[spectrum_index]
         rt = openms_spectrum.getRT()
-        if min_rt <= rt <= max_rt:
-            for mz, i in zip(*openms_spectrum.get_peaks()):
-                if min_mz <= mz <= max_mz:
-                    mzs.append(mz)
-                    rts.append(rt)
-                    ints.append(i)
+        if rt > max_rt:
+            break
+        openms_mzs, openms_intens = openms_spectrum.get_peaks()
+        mz_index = np.searchsorted(openms_mzs, min_mz)
+        for mz, inten in zip(openms_mzs[mz_index:], openms_intens[mz_index:]):
+            if mz > max_mz:
+                break
+            mzs.append(mz)
+            rts.append(rt)
+            ints.append(inten)
+        spectrum_index += 1
 
     ch = Chromatogram(rts, mzs, ints, openms_feature.getMZ())
     ch.normalize(keep_old=True)
